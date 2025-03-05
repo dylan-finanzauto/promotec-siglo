@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  --color-princ-blue: #D5E4F6;
+  --color-secn-blue: #345BB0;
+  --color-tirth: #FF9302;
+  --color-text: #041C3C;
+  --color-text2: #6C8EBA;
+  --color-text3: #A1A2A1;
+  --color-white2: #F4F4F4;
+  --color-gray1: #F0F2F9;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --animate-presence: presence 1.25s ease-in;
+  --animate-climb: climb 0.5s ease-in-out;
+  --animate-slide-down: slide-down 1s ease-in-out;
+  --animate-slide-in: slide-in 0.5s;
+  --animate-slide-out: slide-out 0.5s;
+  --animate-show: show .5s;
+
+  @keyframes presence {
+    0% {
+      opacity: 0;
+      transform: scale(2);
+    }
+
+    50% {
+      opacity: 0.2;
+      transform: scale(2);
+    }
+
+    70% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes climb {
+    from {
+      transform: translateY(100vh);
+    }
+
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-down {
+    0% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(100vh);
+    }
+
+    100% {
+      transform: translateY(100vh);
+    }
+  }
+
+  @keyframes slide-in {
+    0% {
+      opacity: 0;
+      transform: translateX(50px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-out {
+    0% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateX(50px);
+    }
+  }
+
+  @keyframes show {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+}
+
+@layer base {
+
+  /* Barra de desplazamiento (track) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    /* Ancho para la barra de desplazamiento vertical */
+    height: 8px;
+    /* Alto para la barra de desplazamiento horizontal */
+  }
+
+  /* FONDO de la barra de desplazamiento (track) */
+  ::-webkit-scrollbar-track {
+    background: #DEE5ED;
+    /* Color del fondo de la barra de desplazamiento */
+    border-radius: 4px;
+    /* Bordes redondeados */
+  }
+
+  /* ESTILO del "thumb" o control deslizante */
+  ::-webkit-scrollbar-thumb {
+    background: #A0AEC0;
+    /* Color del thumb */
+    border-radius: 4px;
+    /* Bordes redondeados del thumb */
+  }
+
+  /* ESTILO del "thumb" cuando está siendo interactuado (hover) */
+  ::-webkit-scrollbar-thumb:hover {
+    /* Color más oscuro cuando se pasa el ratón */
+    background: #7C93B5;
+  }
+
+  /* Estilo para la esquina donde se encuentran ambas barras */
+  ::-webkit-scrollbar-corner {
+    background: #DEE5ED;
+  }
+
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear {
+    display: none;
+  }
+
+}
+
+@utility scroll-hidden {
+
+  & {
+    overflow-x: scroll;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
