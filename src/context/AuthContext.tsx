@@ -14,7 +14,8 @@ export const AuthContext = createContext<AuthContextType>({
         expirationDate: "",
         expiresIn: 0,
         isAuthenticated: false,
-        role: "SGL-Tecnologia"
+        role: "SGL-Tecnologia",
+        expired: false
     },
     onLogin: () => { },
     onLogOut: () => { }

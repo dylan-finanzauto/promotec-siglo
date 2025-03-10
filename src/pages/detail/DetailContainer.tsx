@@ -1,5 +1,4 @@
 import React from "react";
-import ChevronLeftIcon from "../../components/common/icons/ChevronLeftIcon";
 import Main from "../../layouts/Main";
 import { Link, useParams } from "@tanstack/react-router";
 import FormNews from "./forms/FormNews";
@@ -7,6 +6,7 @@ import Resume from "./Resume";
 import { TabContainer, Tab } from "../../components/ui/TabContainer";
 import FormSupport from "./forms/FormSupports";
 import FormComments from "./forms/FormComments";
+import ChevronLeftFilledIcon from "../../components/common/icons/ChevronLeftFilledIcon";
 
 type Props = {}
 
@@ -23,7 +23,7 @@ const DetailContainer: React.FC<Props> = () => {
                         <Link to={"/"}>
                             <div className="text-text inline-flex items-center gap-2 font-semibold">
                                 <div className="size-10 grid place-items-center">
-                                    <ChevronLeftIcon className="" />
+                                    <ChevronLeftFilledIcon className="" />
                                 </div>
                                 <h4 className="text-2xl">Activos</h4>
                             </div>

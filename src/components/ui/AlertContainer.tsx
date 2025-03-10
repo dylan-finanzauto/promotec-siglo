@@ -27,12 +27,13 @@ const AlertContainer: React.FC = () => {
                                     {icons[a.status]}
                                     <div className="space-y-4">
                                         <h2 className="text-xl text-secn-blue font-bold">{a.title}</h2>
-                                        <p className="text-text">{a.description}</p>
+                                        <div className="text-text">{a.description}</div>
                                     </div>
                                 </div>
                                 <div className="p-8 flex justify-end bg-gray1">
                                     <button className="h-10 w-[250px] rounded-[10px] bg-tirth text-white cursor-pointer" onClick={() => {
                                         removeAlert(a.id)
+                                        if (a.onConfirm) a.onConfirm()
                                     }}>Aceptar</button>
                                 </div>
                             </div>

@@ -1,7 +1,7 @@
 import React from "react";
 import Select from "../../../components/common/Select";
 import Calendar from "../../../components/common/Calendar";
-import TicketParts from "../../tickets/forms/TicketParts";
+import TableParts from "../../tickets/tables/TableParts";
 
 type Props = {}
 
@@ -163,7 +163,7 @@ const FormNews: React.FC<Props> = () => {
                 </div>
             </div>
 
-            <TicketParts />
+            <TableParts />
         </>
     )
 }

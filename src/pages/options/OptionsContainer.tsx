@@ -53,7 +53,7 @@ const OptionsContainer: React.FC = () => {
                     </p>
                 </div>
 
-                <SearchCriteria>
+                <SearchCriteria onSearch={() => { }}>
                     <Select className="w-xs" items={[]} />
                 </SearchCriteria>
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { AuthToken, Token } from "../types/Auth";
+import { AuthToken, Role, Token } from "../types/Auth";
 import { AuthContext } from "../context/AuthContext";
 import { refresh } from "../services/auth";
 
@@ -9,7 +9,8 @@ const initialState = {
     expirationDate: "",
     expiresIn: 0,
     role: "SGL-Promotec",
-    isAuthenticated: false
+    isAuthenticated: false,
+    expired: false,
 } as AuthToken
 
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -31,14 +32,31 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         localStorage.setItem('token', JSON.stringify(token))
         setToken({
             ...token,
-            role: "SGL-Tecnologia",
-            isAuthenticated: true
+            // role: "SGL-Tecnologia",
+            isAuthenticated: true,
+            expired: false,
         })
         setTimeout(async () => {
-            const tokenRefreshed = await refresh({ accessToken: token.accessToken, refreshToken: token.refreshToken })
-            onLogin(tokenRefreshed)
-            console.log("Token refreshed");
-        }, (token.expiresIn - 15) * 60 * 1000)
+            console.log("Current token: ", token)
+            try {
+                const tokenRefreshed = await refresh({ accessToken: token.accessToken, refreshToken: token.refreshToken })
+                onLogin({
+                    ...tokenRefreshed,
+                    role: tokenRefreshed.roles.find(r => r.descripcion.startsWith('SGL'))?.descripcion as Role || 'SGL-Promotec'
+                })
+                console.log("Token refreshed: ", tokenRefreshed);
+            } catch (e) {
+                expireSession()
+            }
+        }, (token.expiresIn - 5) * 60 * 1000)
+    }
+
+    const expireSession = () => {
+        localStorage.removeItem('token')
+        setToken({
+            ...initialState,
+            expired: true
+        })
     }
 
     const onLogOut = () => {

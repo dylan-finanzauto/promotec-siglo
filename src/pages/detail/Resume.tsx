@@ -23,7 +23,7 @@ const Resume: React.FC<Props> = () => {
 
                     {showResume && (
                         <>
-                            <div className="w-[350px] border border-princ-blue shadow-lg bg-white py-5 mr-5 rounded-[14px] flex flex-col gap-5 mb-5">
+                            <div className="relative w-[350px] border border-princ-blue shadow-lg bg-white py-5 mr-5 rounded-[14px] flex flex-col gap-5 mb-5">
                                 <div className="flex justify-between items-center text-text px-5">
                                     <h3 className="font-bold text-xl">Resumen de gestión</h3>
                                     <XIcon className="size-4 cursor-pointer" onClick={() => setShowResume(false)} />

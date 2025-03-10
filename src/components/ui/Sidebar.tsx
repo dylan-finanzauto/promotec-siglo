@@ -3,9 +3,9 @@ import CardIcon from "../common/icons/CardIcon";
 import LikeIcon from "../common/icons/LikeIcon";
 import SheetIcon from "../common/icons/SheetIcon";
 import ShieldIcon from "../common/icons/ShieldIcon";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import SideUser from "./SideUser";
-import { useEffect, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import SidebarSkeleton from "./SidebarSkeleton";
 import { useStore } from "../../store/user";
 import useAuth from "../../hooks/useAuth";
@@ -89,18 +89,11 @@ const Sidebar: React.FC<Props> = () => {
     const { user } = useStore((state) => state);
     const [transitioning, setTransitioning] = useState(false);
     const { onLogOut, token } = useAuth()
-    const navigate = useNavigate()
     const navFiltered = nav.filter(i => i.roles.includes(token.role))
 
     const handleLogOut = useCallback(() => {
         if (transitioning) onLogOut();
     }, [onLogOut, transitioning]);
-
-    useEffect(() => {
-        if (!token.isAuthenticated) {
-            navigate({ to: "/" });
-        }
-    }, [token, navigate]);
 
     if (!user) return <SidebarSkeleton />
 

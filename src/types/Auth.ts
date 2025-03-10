@@ -10,4 +10,5 @@ export interface Token {
 
 export interface AuthToken extends Token {
     isAuthenticated: boolean;
+    expired: boolean;
 }

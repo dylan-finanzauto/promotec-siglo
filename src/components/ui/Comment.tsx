@@ -22,8 +22,8 @@ const Comment: React.FC<Props> = ({ comment }) => {
                 <h4 className="font-semibold text-sm text-secn-blue">{comment.title}</h4>
                 <p className={clsx("text-xs text-text", comment.isResponse ? "text-end" : "")}>{comment.text}</p>
                 <div className="flex gap-2">
-                    {comment.attachs.map((a) => (
-                        <span className="inline-flex items-center rounded bg-[#E7ECF2] text-black p-2 gap-1 cursor-pointer">
+                    {comment.attachs.map((a, i) => (
+                        <span className="inline-flex items-center rounded bg-[#E7ECF2] text-black p-2 gap-1 cursor-pointer" key={i}>
                             <span className="text-[10px] font-semibold">{a}</span>
                             <DownloadIcon />
                         </span>

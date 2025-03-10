@@ -32,3 +32,15 @@ export const getTiempoRelativo = (fechaISO: string) => {
 
     return fecha.toLocaleDateString(); // Devuelve la fecha en formato estándar si es más antigua
 };
+
+export const formatearFechaISO = (fecha: Date) => {
+    const año = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const horas = String(fecha.getHours()).padStart(2, '0');
+    const minutos = String(fecha.getMinutes()).padStart(2, '0');
+    const segundos = String(fecha.getSeconds()).padStart(2, '0');
+    const milisegundos = String(fecha.getMilliseconds()).padStart(3, '0');
+
+    return `${año}-${mes}-${dia}T${horas}:${minutos}:${segundos}.${milisegundos}`;
+};

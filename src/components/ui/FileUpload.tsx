@@ -2,9 +2,16 @@ import React, { useEffect, useState } from "react";
 import CaretIcon from "../common/icons/CaretIcon";
 import PointIcon from "../common/icons/PointIcon";
 import XIcon from "../common/icons/XIcon";
+import useAuth from "../../hooks/useAuth";
 
-const FileUpload: React.FC = () => {
+type Props = {
+    id: string,
+    onUpload: () => void
+}
 
+const FileUpload: React.FC<Props> = ({ id, onUpload }) => {
+
+    const { token } = useAuth()
     const [file, setFile] = useState<File | null>(null);
     const [uploadProgress, setUploadProgress] = useState<number>(0);
 
@@ -17,7 +24,8 @@ const FileUpload: React.FC = () => {
         const formData = new FormData();
         formData.append('file', file);
 
-        xhr.open('POST', 'http://localhost:3000/upload-endpoint');
+        xhr.open('POST', `${import.meta.env.VITE_API_URL}/ticket/add-files/${id}`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token.accessToken}`);
 
         xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
@@ -30,7 +38,7 @@ const FileUpload: React.FC = () => {
             if (xhr.status === 200) {
                 console.log('File uploaded successfully');
                 setTimeout(() => {
-                    setFile(null)
+                    handleUpload()
                 }, 500)
             } else {
                 console.error('File upload failed');
@@ -38,7 +46,13 @@ const FileUpload: React.FC = () => {
         };
 
         xhr.send(formData);
-    }, [file])
+
+    }, [token, file])
+
+    const handleUpload = () => {
+        setFile(null);
+        onUpload();
+    }
 
     const handleCancel = () => {
         xhr.abort();

@@ -6,13 +6,17 @@ import clsx from 'clsx';
 
 type Props = {
     className?: string;
+    name: string;
+    value: Date | null;
+    error: boolean;
+    onChange: (value: Date) => void;
+    onBlur: () => void;
 };
 
 const Days = ["D", "L", "M", "M", "J", "V", "S"];
 
-const Calendar: React.FC<Props> = ({ className }) => {
+const Calendar: React.FC<Props> = ({ className, name, value, error, onChange, onBlur }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [isFocus, setIsFocus] = useState(false);
     const [actionPosition, setActionPosition] = useState<{ top?: number; left?: number; bottom?: number } | null>(null);
 
@@ -23,6 +27,7 @@ const Calendar: React.FC<Props> = ({ className }) => {
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !(containerRef.current as Element).contains(event.target as Node)) {
                 setIsFocus(false);
+                onBlur();
             }
         };
 
@@ -31,7 +36,7 @@ const Calendar: React.FC<Props> = ({ className }) => {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, []);
+    }, [onBlur]);
 
     useEffect(() => {
         const rect = calendarRef.current?.getBoundingClientRect();
@@ -58,7 +63,8 @@ const Calendar: React.FC<Props> = ({ className }) => {
     };
 
     const handleDayClick = (day: number) => {
-        setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
+        const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+        onChange(selectedDate);
         setIsFocus(false);
     };
 
@@ -82,9 +88,9 @@ const Calendar: React.FC<Props> = ({ className }) => {
 
     return (
         <div className="" ref={containerRef}>
-            <div className={clsx("p-3 flex items-center [&_*]:pointer-events-none gap-4 border border-[#DEE5ED] rounded-lg", className, isFocus ? "outline-2 outline-secn-blue" : "")} onClick={() => setIsFocus(true)} ref={calendarRef}>
+            <div className={clsx("p-3 flex items-center [&_*]:pointer-events-none gap-4 border border-[#DEE5ED] rounded-lg", className, isFocus ? "outline-2 outline-secn-blue" : "", error ? "border-red-500" : "")} onClick={() => setIsFocus(true)} ref={calendarRef}>
                 <CalendarIcon className="text-[#1F2024]" />
-                <span className="text-sm text-[#1F2024]">{selectedDate ? selectedDate.toLocaleDateString() : 'dd/mm/aaaa'}</span>
+                <span className="text-sm text-[#1F2024]">{value ? value.toLocaleDateString() : 'dd/mm/aaaa'}</span>
             </div>
             {isFocus && actionPosition && (
                 <div className="absolute z-20 mt-2 p-5 border border-[#DEE5ED] shadow-lg bg-white rounded-lg"
@@ -111,7 +117,7 @@ const Calendar: React.FC<Props> = ({ className }) => {
                             return day !== null ? (
                                 <div
                                     key={i}
-                                    className={`grid place-items-center text-[#444444] rounded-lg cursor-pointer ${selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === month && selectedDate.getFullYear() === year ? 'bg-secn-blue text-white' : 'hover:bg-[#E5F3FF]'}`}
+                                    className={`grid place-items-center text-[#444444] rounded-lg cursor-pointer ${value && value.getDate() === day && value.getMonth() === month && value.getFullYear() === year ? 'bg-secn-blue text-white' : 'hover:bg-[#E5F3FF]'}`}
                                     onClick={() => handleDayClick(day)}
                                 >
                                     {day}

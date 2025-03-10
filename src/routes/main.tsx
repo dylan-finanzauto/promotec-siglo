@@ -10,8 +10,9 @@ import rolesRoute from "./roles";
 import handlerRoute from "./handler";
 import { AuthContextType } from "../context/AuthContext";
 import detailRoute from "./detail";
+import historyRoute from "./history";
 
-export const routeTree = rootRoute.addChildren([authRoute, ticketsRoute, optionsRoute, memosRoute, reportsRoute, usersRoute, rolesRoute, handlerRoute, detailRoute])
+export const routeTree = rootRoute.addChildren([authRoute, ticketsRoute, optionsRoute, memosRoute, reportsRoute, usersRoute, rolesRoute, handlerRoute, detailRoute, historyRoute])
 
 export const router = createRouter({
     routeTree, context: {

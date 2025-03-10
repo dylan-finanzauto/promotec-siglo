@@ -1,11 +1,10 @@
+import React from "react";
+import Main from "../../layouts/Main";
 import { Link } from "@tanstack/react-router";
+import ChevronLeftFilledIcon from "../../components/common/icons/ChevronLeftFilledIcon";
 import SearchIcon from "../../components/common/icons/SearchIcon";
-import Pagination from "../../components/common/Pagination";
 import Table from "../../components/common/Table";
-import Dashboard from "../../layouts/Dashboard";
-import { useStore } from "../../store/user";
-import { useState } from "react";
-import UserForm from "./dialogs/UserForm";
+import Pagination from "../../components/common/Pagination";
 
 const cols = ["ID", "Archivo", "Propietario", "Fecha y hora"];
 
@@ -40,39 +39,27 @@ const actions = [
     },
 ];
 
-const UsersContainer: React.FC = () => {
-
-    const [showUserForm, setShowUserForm] = useState(false);
-    const user = useStore((state) => state.user)
-
+const HistoryContainer: React.FC = () => {
     return (
-        <Dashboard>
-            <div className="space-y-5">
-                <div className="flex justify-between">
+        <Main>
+            <div className="flex flex-col gap-5">
+                <div className="space-y-2">
+                    <Link to={"/"}>
+                        <div className="text-text inline-flex items-center gap-2 font-semibold">
+                            <div className="size-10 grid place-items-center">
+                                <ChevronLeftFilledIcon className="" />
+                            </div>
+                            <h4 className="text-2xl">Historial</h4>
+                        </div>
+                    </Link>
                     <div className="">
-                        <h1 className="font-bold text-2xl text-text">
-                            Bienvenida, {`${user.name} ${user.lastName}`}
-                        </h1>
-                        <p className="text-sm text-text2">
-                            Esta es la información que tenemos para mostrarte
-                        </p>
+                        <span className="text-text2">Usuarios</span> <b>/</b> Historial de cambios
                     </div>
-
-                    <div className="flex gap-4 items-center">
-                        <Link to={"/history/234"}>
-                            <button className="bg-white border border-tirth rounded-lg text-tirth h-10 flex items-center px-14 cursor-pointer">Historial</button>
-                        </Link>
-                        <button className="bg-tirth rounded-lg h-10 flex items-center text-white px-14 cursor-pointer" onClick={() => setShowUserForm(true)}>Nuevo registro</button>
-                    </div>
-
                 </div>
 
                 <div className="bg-white rounded-2xl p-5">
                     <div className="space-y-5">
-                        <div className="flex justify-between">
-                            <h2 className="font-semibold">Listado de registros</h2>
-                            <button className="py-2 px-4 text-white bg-tirth rounded-lg cursor-pointer">Descargar Excel</button>
-                        </div>
+                        <h2 className="font-semibold">Listado de registros</h2>
 
                         <div
                             className="h-10 w-[200px] rounded-lg bg-[#F5F7F9] border border-[#DEE5ED] flex"
@@ -100,10 +87,8 @@ const UsersContainer: React.FC = () => {
 
             </div>
 
-            {showUserForm && <UserForm onCancel={() => setShowUserForm(false)} onCreate={() => { }} />}
-
-        </Dashboard>
+        </Main>
     )
 }
 
-export default UsersContainer;
+export default HistoryContainer;
