@@ -44,3 +44,24 @@ export const formatearFechaISO = (fecha: Date) => {
 
     return `${año}-${mes}-${dia}T${horas}:${minutos}:${segundos}.${milisegundos}`;
 };
+
+export const addToDate = (date: Date, amount: number, unit: 'days' | 'months' | 'weeks' | 'years'): Date => {
+    const newDate = new Date(date);
+    switch (unit) {
+        case 'days':
+            newDate.setDate(newDate.getDate() + amount);
+            break;
+        case 'months':
+            newDate.setMonth(newDate.getMonth() + amount);
+            break;
+        case 'weeks':
+            newDate.setDate(newDate.getDate() + amount * 7);
+            break;
+        case 'years':
+            newDate.setFullYear(newDate.getFullYear() + amount);
+            break;
+        default:
+            throw new Error('Invalid unit');
+    }
+    return newDate;
+};

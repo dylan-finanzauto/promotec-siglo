@@ -8,28 +8,25 @@ import clsx from "clsx";
 import { InputField } from "../../../components/common/InputField";
 import TableParts from "../tables/TableParts";
 import SpinnerIcon from "../../../components/common/icons/SpinnerIcon";
-import { useState } from "react";
-import { Piece, PostTicket } from "../../../types/Rest";
-import { useMutation } from "@tanstack/react-query";
-import { addPieces, create, update } from "../../../services/ticket";
-import { Ticket } from "../../../types/Ticket";
+import { useEffect, useState } from "react";
+import { Piece } from "../../../types/Rest";
+import { create, detail, update } from "../../../services/ticket";
 import useAuth from "../../../hooks/useAuth";
-import { formatearFechaISO } from "../../../util/date";
+import { addToDate, formatearFechaISO } from "../../../util/date";
 import { useAlert } from "../../../hooks/useAlert";
-
-// type Props = {
-//     id: string,
-//     onNext: (ticket: Ticket) => void,
-//     valueForm: Ticket
-// }
+import { useMutation } from "@tanstack/react-query";
+import { Ticket } from "../../../types/Ticket";
+import { useIdentifier } from "../../../hooks/useIdentifier";
 
 type Props = {
-    id: string,
-    onSave: (id: string) => void
+    // id: string | null,
+    onSave: () => void
 }
 
 const FormTicket: React.FC<Props> = ({ onSave }) => {
 
+    const [formData, setFormData] = useState<Ticket | null>(null);
+    const { id, changeId } = useIdentifier();
     const { token } = useAuth()
     const { addAlert } = useAlert()
     const { concessioners } = concStore((state) => state)
@@ -37,40 +34,62 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
     const { typeVehicles } = tvStore((state) => state)
     const [pieces, setPieces] = useState<Piece[]>([])
 
+    useEffect(() => {
+        if (!id) return
+
+        mutation.mutate(id)
+    }, [id])
+
+    const mutation = useMutation({
+        mutationKey: [''],
+        mutationFn: (id: string) => detail(token.accessToken, id),
+        onSuccess: (data) => {
+            setFormData(data)
+        }
+    })
+
     const form = useForm({
         defaultValues: {
-            client: '',
-            concessionerCode: '',
-            catalog: '',
+            client: formData?.client ?? '',
+            concessionerCode: formData?.concessionerCode ?? '',
+            catalog: formData?.catalog ?? '',
             ocurrencyDate: new Date(),
             deliveryDate: new Date(),
             preAlertDate: new Date(),
-            contact: '',
-            email: '',
-            telefono: '',
-            concessionerId: 0,
-            typeVehicleId: 0,
-            serie: '',
-            numberDua: '',
-            numberRemesa: '',
-            driverName: '',
-            plate: '',
+            contact: formData?.contact ?? '',
+            email: formData?.email ?? '',
+            phone: formData?.phone ?? '',
+            concessionerId: formData?.concessionerId ?? 0,
+            typeVehicleId: formData?.typeVehicleId ?? 0,
+            serie: formData?.serie ?? '',
+            numberDua: formData?.numberDua ?? '',
+            numberRemesa: formData?.numberRemesa ?? '',
+            driverName: formData?.driverName ?? '',
+            plate: formData?.plate ?? '',
         },
         onSubmit: async ({ value }) => {
             try {
-                const id = await create(token.accessToken)
-                console.log("id: ", id)
+
                 const data = {
                     ...value,
                     ocurrencyDate: formatearFechaISO(value.ocurrencyDate),
                     deliveryDate: formatearFechaISO(value.deliveryDate),
                     preAlertDate: formatearFechaISO(value.preAlertDate),
                 }
-                console.log("Data enviada: ", data)
-                await update(token.accessToken, id, data)
-                await addPieces(token.accessToken, id, pieces)
 
-                onSave(id)
+                if (id) {
+                    await update(token.accessToken, id, data)
+                    onSave()
+                    return
+                }
+
+                const responseId = await create(token.accessToken, {
+                    ...data,
+                    pieces
+                })
+
+                changeId(responseId)
+                onSave()
             } catch (e) {
                 addAlert("error", "Crear siniestro", "Ocurrió un error inesperado")
             }
@@ -213,6 +232,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                         <Calendar
                                             name={field.name}
                                             value={field.state.value}
+                                            maxDate={addToDate(form.getFieldValue('deliveryDate'), 9, "days")}
                                             error={field.state.meta.errors.length > 0}
                                             onChange={field.handleChange}
                                             onBlur={field.handleBlur}
@@ -270,7 +290,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
 
                         <div className="flex flex-col gap-1">
                             <form.Field
-                                name="telefono"
+                                name="phone"
                                 validators={{
                                     onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
                                 }}

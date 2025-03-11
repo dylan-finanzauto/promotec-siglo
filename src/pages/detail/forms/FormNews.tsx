@@ -163,7 +163,7 @@ const FormNews: React.FC<Props> = () => {
                 </div>
             </div>
 
-            <TableParts />
+            <TableParts pieces={[]} onAdd={() => { }} />
         </>
     )
 }

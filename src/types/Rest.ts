@@ -38,18 +38,6 @@ export interface RefreshResponse extends Token {
     roles: Role[]
 }
 
-export interface Piece {
-    typeDamageId: number;
-    typePieceId: number;
-    sizeDamageId: number;
-    count: number;
-    replace: boolean;
-    amount: number;
-    attributableId: number;
-    stateId: number;
-    typologyId: number;
-}
-
 export interface CommentRequest {
     emails: string[];
     comment: string;
@@ -62,5 +50,59 @@ export interface File {
 }
 
 export interface PostTicket {
+    client: string;
+    concessionerCode: string;
+    catalog: string;
+    ocurrencyDate: string;
+    deliveryDate: string;
+    preAlertDate: string;
+    contact: string;
+    email: string;
+    phone: string;
+    concessionerId: number;
+    typeVehicleId: number;
+    serie: string;
+    numberDua: string;
+    numberRemesa: string;
+    driverName: string;
+    plate: string;
+    pieces: Piece[];
+}
 
+export interface PostTicketComplete {
+    alertDate: string;
+    responseDate: string;
+    requestDate: string;
+    invoice: string;
+    invoiceNumber: string;
+    invoiceAmount: number;
+    ticketAmount: number;
+    firstPayment: number;
+    emailId: number;
+    comments: Comment[];
+}
+
+export interface Comment {
+    emails: string[];
+    comment: string;
+    files: File[];
+}
+
+export interface Piece {
+    typeDamageId: number;
+    typePieceId: number;
+    sizeDamageId: number;
+    count: number;
+    replace: boolean;
+    amount: number;
+    attributableId: number;
+    stateId: number;
+    typologyId: number;
+}
+
+export interface CompleteResponse {
+    sequenceId: string;
+    concessionerId: number;
+    serie: string;
+    observation: string;
 }

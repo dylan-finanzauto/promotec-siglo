@@ -18,11 +18,10 @@ const FileUpload: React.FC<Props> = ({ id, onUpload }) => {
     let xhr = new XMLHttpRequest();
 
     useEffect(() => {
-        console.log("File: ", file)
         if (!file) return;
 
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('Files', file);
 
         xhr.open('POST', `${import.meta.env.VITE_API_URL}/ticket/add-files/${id}`);
         xhr.setRequestHeader('Authorization', `Bearer ${token.accessToken}`);
@@ -36,12 +35,9 @@ const FileUpload: React.FC<Props> = ({ id, onUpload }) => {
 
         xhr.onload = () => {
             if (xhr.status === 200) {
-                console.log('File uploaded successfully');
                 setTimeout(() => {
                     handleUpload()
                 }, 500)
-            } else {
-                console.error('File upload failed');
             }
         };
 

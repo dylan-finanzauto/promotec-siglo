@@ -10,16 +10,13 @@ const steps = ["Info. Reclamo", "Soportes"];
 const TicketsContainer: React.FC = () => {
 
     const [step, setStep] = useState(0)
-    const [id, setId] = useState('5c39fffa-9fd9-48d6-ceac-08dd5fe5af42')
     const user = useStore((state) => state.user)
 
-    const handleSave = (id: string) => {
+    const handleSave = () => {
         setStep(1)
-        setId(id)
     }
 
     const handleCreate = () => {
-
     }
 
     return (
@@ -34,9 +31,9 @@ const TicketsContainer: React.FC = () => {
 
                 <StepsBar steps={steps} currentStep={step} />
                 {step == 0 ? (
-                    <FormTicket id={id} onSave={handleSave} />
+                    <FormTicket onSave={handleSave} />
                 ) : (
-                    <SupportForm id={id} onBack={() => setStep(0)} onCreate={handleCreate} />
+                    <SupportForm onBack={() => setStep(0)} onCreate={handleCreate} />
                 )}
 
             </div>

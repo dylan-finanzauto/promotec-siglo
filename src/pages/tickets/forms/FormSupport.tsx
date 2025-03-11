@@ -9,7 +9,7 @@ import { useForm } from "@tanstack/react-form";
 import clsx from "clsx";
 import { InputField } from "../../../components/common/InputField";
 import SpinnerIcon from "../../../components/common/icons/SpinnerIcon";
-import { files, update } from "../../../services/ticket";
+import { complete, files, update } from "../../../services/ticket";
 import useAuth from "../../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import TableSkeleton from "../../../components/common/TableSkeleton";
@@ -18,9 +18,11 @@ import { create as createComment } from "../../../services/comment";
 import { formatearFechaISO } from "../../../util/date";
 import { useAlert } from "../../../hooks/useAlert";
 import { useNavigate } from "@tanstack/react-router";
-import { AxiosError } from "axios";
+import { useEffect } from "react";
+import { useIdentifier } from "../../../hooks/useIdentifier";
+import { PostTicketComplete } from "../../../types/Rest";
 
-const cols = ["ID", "Archivo", "Propietario", "Fecha y hora"];
+const cols = ["originalName", "size", "extension", "created", "createdBy"];
 
 const actions = [
     {
@@ -50,17 +52,21 @@ const actions = [
 ];
 
 type Props = {
-    id: string,
     onBack: () => void,
     onCreate: () => void,
 }
 
-const SupportForm: React.FC<Props> = ({ id, onBack, onCreate }) => {
+const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
 
+    const { id, changeId } = useIdentifier()
     const { token } = useAuth()
     const { addAlert } = useAlert()
     const navigate = useNavigate()
     const { emails } = useStore((state) => state);
+
+    useEffect(() => {
+        console.log("Id", id)
+    }, [id])
 
     const form = useForm({
         defaultValues: {
@@ -75,17 +81,25 @@ const SupportForm: React.FC<Props> = ({ id, onBack, onCreate }) => {
             emailId: 0
         },
         onSubmit: async ({ value }) => {
-            console.log("support form value: ", value)
-            commentForm.handleSubmit()
+            if (!id) return
+
+            console.log("Comentario: ", commentForm.state.values)
+            if (!commentForm.state.isValid) addAlert("error", "Crear siniestro", "Existen campos pendientes por diligenciar, para poder continuar con el proceso.")
+
+            // commentForm.handleSubmit()
             const data = {
                 ...value,
                 alertDate: formatearFechaISO(value.alertDate),
                 responseDate: formatearFechaISO(value.responseDate),
                 requestDate: formatearFechaISO(value.requestDate),
-            }
-            console.log("Data enviada: ", data)
+                comments: [
+                    commentForm.state.values
+                ]
+            } as PostTicketComplete
+            console.log("Data: ", data)
             try {
-                await update(token.accessToken, id, data)
+                const response = await complete(token.accessToken, id, data)
+                console.log("Response: ", response)
                 addAlert(
                     "success",
                     "Siniestro cargado exitósamente",
@@ -96,12 +110,17 @@ const SupportForm: React.FC<Props> = ({ id, onBack, onCreate }) => {
                             <p>Se ha dado respuesta a la Reclamación No. 2024-01-5815, debe ingresar a la herramienta de gestión y continuar con el proceso.</p>
                         </div>
                         <div className="">
-                            <p><b>Concesionario: </b>VEHICAMINOS FORD</p>
-                            <p><b>Serie: </b>1FMSK8FH5PGA87969</p>
-                            <p><b>Observación: </b>Prueba</p>
+                            <p><b>Concesionario: </b>{response.concessionerId}</p>
+                            <p><b>Serie: </b>{response.serie}</p>
+                            <p><b>Observación: </b>{response.observation}</p>
                         </div>
                     </div>,
-                    () => navigate({ to: "/options" }))
+                    () => {
+                        navigate({ to: "/options" })
+                        changeId(null)
+                    })
+                onCreate()
+
             } catch (e) {
                 addAlert("error", "Crear siniestro", "Ocurrió un error inesperado")
             }
@@ -115,7 +134,7 @@ const SupportForm: React.FC<Props> = ({ id, onBack, onCreate }) => {
             files: [] as { FileBase64: string, fileName: string }[]
         },
         onSubmit: ({ value }) => {
-            console.log("comment value: ", value)
+            if (!id) return
             createComment(token.accessToken, id, value)
         }
     })
@@ -123,7 +142,9 @@ const SupportForm: React.FC<Props> = ({ id, onBack, onCreate }) => {
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['files'],
         queryFn: async () => {
+            if (!id) return
             const ticketFiles = await files(token.accessToken, id)
+            console.log("ticket files: ", ticketFiles)
             return ticketFiles;
         },
     })
@@ -148,7 +169,7 @@ const SupportForm: React.FC<Props> = ({ id, onBack, onCreate }) => {
                                     Registro fotográfico / Factura de venta</b>
                             </p>
                         </div>
-                        <FileUpload id={id} onUpload={() => refetch()} />
+                        {id && <FileUpload id={id} onUpload={() => refetch()} />}
                         <div
                             className="p-5 rounded-[10px] border border-princ-blue space-y-3"
                         >

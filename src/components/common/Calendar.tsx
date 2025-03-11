@@ -11,11 +11,13 @@ type Props = {
     error: boolean;
     onChange: (value: Date) => void;
     onBlur: () => void;
+    minDate?: Date;
+    maxDate?: Date;
 };
 
 const Days = ["D", "L", "M", "M", "J", "V", "S"];
 
-const Calendar: React.FC<Props> = ({ className, name, value, error, onChange, onBlur }) => {
+const Calendar: React.FC<Props> = ({ className, name, value, error, onChange, onBlur, minDate, maxDate }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isFocus, setIsFocus] = useState(false);
     const [actionPosition, setActionPosition] = useState<{ top?: number; left?: number; bottom?: number } | null>(null);
@@ -55,17 +57,25 @@ const Calendar: React.FC<Props> = ({ className, name, value, error, onChange, on
     }, [isFocus]);
 
     const handlePrevMonth = () => {
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+        const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+        if (!minDate || newDate >= minDate) {
+            setCurrentDate(newDate);
+        }
     };
 
     const handleNextMonth = () => {
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+        const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+        if (!maxDate || newDate <= maxDate) {
+            setCurrentDate(newDate);
+        }
     };
 
     const handleDayClick = (day: number) => {
         const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-        onChange(selectedDate);
-        setIsFocus(false);
+        if ((!minDate || selectedDate >= minDate) && (!maxDate || selectedDate <= maxDate)) {
+            onChange(selectedDate);
+            setIsFocus(false);
+        }
     };
 
     const getDaysInMonth = (year: number, month: number) => {
@@ -114,11 +124,13 @@ const Calendar: React.FC<Props> = ({ className, name, value, error, onChange, on
                         ))}
 
                         {daysArray.map((day, i) => {
+                            const selectedDate = day !== null ? new Date(currentDate.getFullYear(), currentDate.getMonth(), day) : null;
+                            const isDisabled = selectedDate && ((minDate && selectedDate < minDate) || (maxDate && selectedDate > maxDate));
                             return day !== null ? (
                                 <div
                                     key={i}
-                                    className={`grid place-items-center text-[#444444] rounded-lg cursor-pointer ${value && value.getDate() === day && value.getMonth() === month && value.getFullYear() === year ? 'bg-secn-blue text-white' : 'hover:bg-[#E5F3FF]'}`}
-                                    onClick={() => handleDayClick(day)}
+                                    className={`grid place-items-center text-[#444444] rounded-lg cursor-pointer ${value && value.getDate() === day && value.getMonth() === month && value.getFullYear() === year ? 'bg-secn-blue text-white' : 'hover:bg-[#E5F3FF]'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    onClick={() => !isDisabled && handleDayClick(day)}
                                 >
                                     {day}
                                 </div>

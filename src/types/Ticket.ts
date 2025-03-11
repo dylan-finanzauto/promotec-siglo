@@ -7,7 +7,7 @@ export interface Ticket {
     preAlertDate?: string;
     contact?: string;
     email?: string;
-    telefono?: string;
+    phone?: string;
     concessionerId?: number;
     typeVehicleId?: number;
     serie?: string;
@@ -36,4 +36,13 @@ export interface Piece {
     attributableName: string;
     stateIdName: string;
     typologyName: string;
+}
+
+export interface File {
+    nodeId: string;
+    originalName: string;
+    size: number;
+    extension: string;
+    created: string;
+    createdBy: string;
 }
