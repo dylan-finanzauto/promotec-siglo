@@ -10,8 +10,10 @@ import { useStore as tdStore } from '../store/typeDamage'
 import { useStore as tpStore } from '../store/typePiece'
 import { useStore as stateStore } from '../store/state'
 import { useStore as typologyStore } from '../store/typology'
+import { useStore as roleStore } from '../store/role'
 import { attributable, company, concessioner, email, sizeDamage, state, typeDamage, typePiece, typeVehicle, typology } from '../services/master'
 import { current } from '../services/user'
+import { all } from '../services/role'
 
 const useMutations = () => {
     const { updateUser } = userStore((state) => state)
@@ -25,6 +27,7 @@ const useMutations = () => {
     const { updateTypePieces } = tpStore((state) => state)
     const { updateStates } = stateStore((state) => state)
     const { updateTypologies } = typologyStore((state) => state)
+    const { updateRoles } = roleStore((state) => state)
 
     const userMutation = useMutation({
         mutationFn: (token: string) => current(token),
@@ -81,7 +84,12 @@ const useMutations = () => {
         onSuccess: (data) => updateTypologies(data)
     })
 
-    return { userMutation, consMutation, comMutation, emailMutation, sdMutation, tvMutation, tdMutation, tpMutation, attriMutation, stateMutation, typologyMutation }
+    const roleMutation = useMutation({
+        mutationFn: (token: string) => all(token),
+        onSuccess: (data) => updateRoles(data)
+    })
+
+    return { userMutation, consMutation, comMutation, emailMutation, sdMutation, tvMutation, tdMutation, tpMutation, attriMutation, stateMutation, typologyMutation, roleMutation }
 }
 
 export default useMutations

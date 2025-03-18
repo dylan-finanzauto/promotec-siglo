@@ -9,7 +9,7 @@ import { useStore as typologyStore } from "../../../store/typology";
 import { useStore as sdStore } from "../../../store/sizeDamage";
 import { useForm } from "@tanstack/react-form";
 import { InputField } from "../../../components/common/InputField";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import SpinnerIcon from "../../../components/common/icons/SpinnerIcon";
 import { Piece } from "../../../types/Ticket";
 import { Piece as AddPiece } from "../../../types/Rest";
@@ -17,18 +17,24 @@ import CheckIcon from "../../../components/common/icons/CheckIcon";
 import RadioGroup from "../../../components/common/RadioGroup";
 import { useAlert } from "../../../hooks/useAlert";
 
-// type Props = {
-//     id: string,
-// }
-type Props = {
-    pieces: AddPiece[],
-    onAdd: (piece: AddPiece) => void
+type Action = {
+    text: string,
+    onClick: (row: any) => void
 }
 
-const TableParts: React.FC<Props> = ({ pieces, onAdd }) => {
+type Props = {
+    pieces: AddPiece[],
+    onAdd: (piece: AddPiece) => void,
+    actions?: Action[]
+}
+
+const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
 
     const [isInput, setIsInput] = useState(false);
     const { addAlert } = useAlert()
+    const [rowSelected, setRowSelected] = useState(null);
+    const [actionPosition, setActionPosition] = useState<{ top: number, left: number } | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const { typeDamages } = tdStore((state) => state)
     const { typePieces } = tpStore((state) => state)
@@ -61,11 +67,33 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd }) => {
         },
         onSubmit: ({ value }) => {
             onAdd(value)
+            form.reset()
         },
         onSubmitInvalid: () => {
             addAlert("error", "Añadir pieza", "Existen campos pendientes por diligenciar")
         }
     })
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !(containerRef.current as Element).contains(event.target as Node)) {
+                setRowSelected(null);
+                setActionPosition(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [rowSelected]);
+
+    const handleSelect = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, row: any) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setRowSelected(row);
+        setActionPosition({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+    };
 
     return (
         <>
@@ -95,7 +123,7 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd }) => {
                 </div>
                 <div className="">
 
-                    <div className="grid grid-cols-[repeat(13,1fr)] overflow-auto rounded-lg border border-[#DEE5ED]">
+                    <div className="grid grid-cols-[repeat(11,1fr)] overflow-auto rounded-lg border border-[#DEE5ED]">
 
                         <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">#</div>
                         <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">Tipo daño</div>
@@ -105,8 +133,6 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd }) => {
                         <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">Cambio pieza</div>
                         <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">Valor pieza</div>
                         <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">Atribuible</div>
-                        <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">No. Fact. recobro</div>
-                        <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">Valor recobro</div>
                         <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">Estado</div>
                         <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">Tipología</div>
                         <div className="text-sm sticky right-0 px-3 py-2 bg-white shadow-lg border-b border-[#DEE5ED]"></div>
@@ -262,22 +288,6 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd }) => {
                                     />
                                 </div>
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
-                                    <input
-                                        className="h-10 border w-min border-[#DEE5ED] bg-[#F5F7F9] rounded-lg px-3 py-[10px] outline-secn-blue"
-                                        type="text"
-                                        name=""
-                                        id=""
-                                    />
-                                </div>
-                                <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
-                                    <input
-                                        className="h-10 border w-min border-[#DEE5ED] bg-[#F5F7F9] rounded-lg px-3 py-[10px] outline-secn-blue"
-                                        type="text"
-                                        name=""
-                                        id=""
-                                    />
-                                </div>
-                                <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
                                     <form.Field
                                         name="stateId"
                                         validators={{
@@ -318,7 +328,10 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd }) => {
                                     />
                                 </div>
                                 <div className="text-sm sticky right-0 px-3 py-2 bg-white shadow-lg grid place-items-center border-b border-[#DEE5ED]">
-                                    <button className="grid place-items-center rounded-lg size-10 hover:bg-[#EDEFF7] transition cursor-pointer" onClick={() => setIsInput(false)}>
+                                    <button className="grid place-items-center rounded-lg size-10 hover:bg-[#EDEFF7] transition cursor-pointer" onClick={() => {
+                                        setIsInput(false)
+                                        form.reset()
+                                    }}>
                                         <TrashIcon className="text-[#7C93B5]" />
                                     </button>
                                 </div>
@@ -335,12 +348,10 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd }) => {
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text">{p.replace ? 'Si' : 'No'}</div>
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text">{p.amount}</div>
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text">{p.attributableName}</div>
-                                <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text">0000000000</div>
-                                <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text">$ 00000000</div>
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text">{p.stateIdName}</div>
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text">{p.typologyName}</div>
                                 <div className="text-sm sticky right-0 px-3 py-2 bg-white shadow-lg grid place-items-center">
-                                    <button className="grid place-items-center rounded-lg size-10 hover:bg-[#EDEFF7] transition cursor-pointer">
+                                    <button className="grid place-items-center rounded-lg size-10 hover:bg-[#EDEFF7] transition cursor-pointer" onClick={(e) => handleSelect(e, p)}>
                                         <OptionsIcon className="text-[#7C93B5]" />
                                     </button>
                                 </div>
@@ -351,7 +362,22 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd }) => {
 
 
                 </div>
-            </div >
+            </div>
+
+            {actionPosition && rowSelected && actions && (
+                <div className="absolute z-10" ref={containerRef} style={{ top: actionPosition.top, left: actionPosition.left }}>
+                    <ul className="w-[180px] max-h-[248px] overflow-y-auto rounded-lg py-2 bg-white border border-[#DEE5ED] mt-1 shadow-lg">
+                        <li className="py-3 px-4 font-semibold">Acciones</li>
+                        {actions.map((action, index) => (
+                            <li key={index} className="py-3 px-4 cursor-pointer hover:bg-white2" onClick={() => {
+                                action.onClick(rowSelected);
+                                setRowSelected(null);
+                            }
+                            }>{action.text}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
 
         </>

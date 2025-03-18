@@ -8,6 +8,23 @@ export interface BasicResponse<T> {
     error: Error;
 }
 
+export interface PaginationRequest {
+    PageNumber: number;
+    PageSize: number;
+}
+
+export interface PaginationResponse {
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+}
+
+export interface PaginatedResponse<T> extends PaginationResponse {
+    items: T[];
+}
+
 interface Error {
     code: null;
     description: string;
@@ -105,4 +122,16 @@ export interface CompleteResponse {
     concessionerId: number;
     serie: string;
     observation: string;
+}
+
+export interface CommentResponse {
+    observation: string;
+    files: any[];
+    userName: string;
+    created: string;
+}
+
+export interface RoleResponse {
+    roleId: string;
+    normalizedName: string;
 }

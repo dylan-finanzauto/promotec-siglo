@@ -4,6 +4,7 @@ import DocumentOutlinedIcon from "../../components/common/icons/DocumentOutlined
 import DownloadOutlinedIcon from "../../components/common/icons/DownloadOutlinedIcon";
 import SearchCriteria from "../../components/ui/SearchCriteria";
 import Dashboard from "../../layouts/Dashboard";
+import { useForm } from "@tanstack/react-form";
 
 type File = {
     title: string,
@@ -42,6 +43,12 @@ const ReportsContainer: React.FC = () => {
 
     const [showResults, setShowResults] = useState(false);
 
+    const form = useForm({
+        defaultValues: {
+            date: new Date()
+        }
+    })
+
     return (
         <Dashboard>
             <div className="space-y-5">
@@ -53,7 +60,19 @@ const ReportsContainer: React.FC = () => {
                 </div>
 
                 <SearchCriteria onSearch={() => setShowResults(true)}>
-                    <Calendar className="w-xs" />
+                    <form.Field
+                        name="date"
+                        children={(field) => (
+                            <Calendar
+                                className="w-xs"
+                                name={field.name}
+                                value={field.state.value}
+                                error={field.state.meta.errors.length > 0}
+                                onChange={field.handleChange}
+                                onBlur={field.handleBlur}
+                            />
+                        )}
+                    />
                 </SearchCriteria>
 
 

@@ -1,18 +1,25 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Main from "../../layouts/Main";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import FormNews from "./forms/FormNews";
 import Resume from "./Resume";
 import { TabContainer, Tab } from "../../components/ui/TabContainer";
 import FormSupport from "./forms/FormSupports";
 import FormComments from "./forms/FormComments";
 import ChevronLeftFilledIcon from "../../components/common/icons/ChevronLeftFilledIcon";
+import { useIdentifier } from "../../hooks/useIdentifier";
 
 type Props = {}
 
 const DetailContainer: React.FC<Props> = () => {
 
     const { id } = useParams({ strict: false });
+    const { changeId } = useIdentifier()
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        if (id) changeId(id)
+    }, [id])
 
     return (
         <>
@@ -20,7 +27,7 @@ const DetailContainer: React.FC<Props> = () => {
                 <Resume />
                 <div className="flex flex-col gap-5">
                     <div className="space-y-2">
-                        <Link to={"/"}>
+                        <Link to={"/options"}>
                             <div className="text-text inline-flex items-center gap-2 font-semibold">
                                 <div className="size-10 grid place-items-center">
                                     <ChevronLeftFilledIcon className="" />
@@ -35,10 +42,10 @@ const DetailContainer: React.FC<Props> = () => {
 
                     <TabContainer>
                         <Tab title="Formulario novedades / reclamos">
-                            <FormNews />
+                            <FormNews onCancel={() => navigate({ to: '/options' })} />
                         </Tab>
                         <Tab title="Soportes">
-                            <FormSupport />
+                            <FormSupport onCancel={() => navigate({ to: '/options' })} />
                         </Tab>
                         <Tab title="Histórico comentarios">
                             <FormComments />

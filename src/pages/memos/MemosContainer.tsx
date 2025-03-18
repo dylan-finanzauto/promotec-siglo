@@ -47,7 +47,7 @@ const MemosContainer: React.FC = () => {
 
                 <div className="bg-white rounded-[14px] p-5 flex flex-col gap-5">
                     <h2 className="text-text font-bold text-xl">Documentos de soportes</h2>
-                    <FileUpload />
+                    <FileUpload onUpload={() => { }} id="" />
                     <div className="p-5 rounded-2xl border border-[#DEE5ED] space-y-5">
                         <h3 className="font-semibold">Listado de documentos</h3>
                         <div

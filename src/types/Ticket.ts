@@ -1,8 +1,10 @@
+import { PaginationRequest } from "./Rest";
+
 export interface Ticket {
     client?: string;
     concessionerCode?: string;
     catalog?: string;
-    ocurrencyDate?: string;
+    occurrenceDate?: string;
     deliveryDate?: string;
     preAlertDate?: string;
     contact?: string;
@@ -18,12 +20,11 @@ export interface Ticket {
     alertDate?: string;
     responseDate?: string;
     requestDate?: string;
-    invoice?: string;
-    invoiceNumber?: string;
-    invoiceAmount?: number;
+    inVoice?: string;
+    inVoiceNumber?: string;
+    inVoiceAmount?: number;
     ticketAmount?: number;
     firstPayment?: number;
-    emailId?: number;
 }
 
 export interface Piece {
@@ -45,4 +46,26 @@ export interface File {
     extension: string;
     created: string;
     createdBy: string;
+}
+
+export interface Criteria extends PaginationRequest {
+    SequenceId?: string;
+    OccurrenceDate?: string;
+    ConcessionerId?: number;
+    TypeVehicleId?: number;
+    Plate?: string;
+    NumberDua?: string;
+    Serie?: string;
+    DriverName?: string;
+}
+
+export interface TicketResult {
+    ticketId: string;
+    sequenceId: string;
+    client: string;
+    occurrenceDate: string;
+    concessionerName: string;
+    typeVehicleName: string;
+    serie: string;
+    plate: string;
 }

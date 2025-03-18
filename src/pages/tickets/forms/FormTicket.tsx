@@ -10,16 +10,45 @@ import TableParts from "../tables/TableParts";
 import SpinnerIcon from "../../../components/common/icons/SpinnerIcon";
 import { useEffect, useState } from "react";
 import { Piece } from "../../../types/Rest";
-import { create, detail, update } from "../../../services/ticket";
+import { create, detail, update, pieces as ticketPieces } from "../../../services/ticket";
 import useAuth from "../../../hooks/useAuth";
 import { addToDate, formatearFechaISO } from "../../../util/date";
 import { useAlert } from "../../../hooks/useAlert";
 import { useMutation } from "@tanstack/react-query";
 import { Ticket } from "../../../types/Ticket";
 import { useIdentifier } from "../../../hooks/useIdentifier";
+import { z } from 'zod'
+
+const ticketSchema = z.object({
+    client: z.string(),
+    concessionerCode: z.string(),
+    catalog: z.string(),
+    ocurrencyDate: z.date(),
+    deliveryDate: z.date(),
+    preAlertDate: z.date(),
+    contact: z.string(),
+    email: z.string().refine(value => {
+        if (value && value.trim() !== "") {
+            return /\S+@\S+\.\S+/.test(value);
+        }
+        return true;
+    }),
+    phone: z.string().refine(value => {
+        if (value && value.trim() !== "") {
+            return /^[0-9]+$/.test(value);
+        }
+        return true;
+    }),
+    concessionerId: z.number().gt(0),
+    typeVehicleId: z.number().gt(0),
+    serie: z.string().nonempty(),
+    numberDua: z.string().nonempty(),
+    numberRemesa: z.string().nonempty(),
+    driverName: z.string().nonempty(),
+    plate: z.string().nonempty()
+})
 
 type Props = {
-    // id: string | null,
     onSave: () => void
 }
 
@@ -38,13 +67,43 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
         if (!id) return
 
         mutation.mutate(id)
+        piecesMutation.mutate(id)
     }, [id])
 
+    const actions = [
+        {
+            text: "Editar",
+            onClick: () => {
+                console.log("Ir a editar");
+            },
+        },
+        {
+            text: "Eliminar",
+            onClick: (row: Piece) => {
+                console.log("Ir a eliminar");
+                setPieces(curr => curr.filter(p => {
+
+                    return p != row
+                }))
+            },
+        },
+    ];
+
     const mutation = useMutation({
-        mutationKey: [''],
+        mutationKey: ['detail'],
         mutationFn: (id: string) => detail(token.accessToken, id),
         onSuccess: (data) => {
+            console.log("data: ", data)
             setFormData(data)
+        }
+    })
+
+    const piecesMutation = useMutation({
+        mutationKey: ['pieces'],
+        mutationFn: (id: string) => ticketPieces(token.accessToken, id),
+        onSuccess: (data) => {
+            // console.log("Data: ", data)
+            setPieces(data.map(p => ({ amount: p.amount, attributableId: p.attributableName, count: p.count, replace: p.replace, sizeDamageId: p.sizeDamageName, stateId: p.stateIdName, typeDamageId: p.typeDamageName, typePieceId: p.typePieceName, typologyId: p.typologyName })))
         }
     })
 
@@ -53,9 +112,9 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
             client: formData?.client ?? '',
             concessionerCode: formData?.concessionerCode ?? '',
             catalog: formData?.catalog ?? '',
-            ocurrencyDate: new Date(),
-            deliveryDate: new Date(),
-            preAlertDate: new Date(),
+            ocurrencyDate: (formData?.occurrenceDate ? new Date(formData.occurrenceDate) : null) as null | Date,
+            deliveryDate: (formData?.deliveryDate ? new Date(formData.deliveryDate) : null) as null | Date,
+            preAlertDate: (formData?.preAlertDate ? new Date(formData.preAlertDate) : new Date()) as null | Date,
             contact: formData?.contact ?? '',
             email: formData?.email ?? '',
             phone: formData?.phone ?? '',
@@ -67,15 +126,20 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
             driverName: formData?.driverName ?? '',
             plate: formData?.plate ?? '',
         },
+        validators: {
+            onChange: ticketSchema
+        },
         onSubmit: async ({ value }) => {
             try {
 
                 const data = {
                     ...value,
-                    ocurrencyDate: formatearFechaISO(value.ocurrencyDate),
-                    deliveryDate: formatearFechaISO(value.deliveryDate),
-                    preAlertDate: formatearFechaISO(value.preAlertDate),
+                    ocurrencyDate: value.ocurrencyDate ? formatearFechaISO(value.ocurrencyDate) : '',
+                    deliveryDate: value.deliveryDate ? formatearFechaISO(value.deliveryDate) : '',
+                    preAlertDate: value.preAlertDate ? formatearFechaISO(value.preAlertDate) : '',
                 }
+
+                console.log("data: ", data)
 
                 if (id) {
                     await update(token.accessToken, id, data)
@@ -113,9 +177,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="client"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Cliente requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Cliente</label>
@@ -135,12 +196,9 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="concessionerCode"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Código consecionario requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Código consecionario</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Código concesionario</label>
                                         <InputField
                                             type="text"
                                             id={field.name}
@@ -158,9 +216,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="catalog"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Catálogo</label>
@@ -181,9 +236,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="ocurrencyDate"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Ocurrencia Novedad</label>
@@ -194,7 +246,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                             onChange={field.handleChange}
                                             onBlur={field.handleBlur}
                                         />
-                                        {/* <FieldInfo field={field} /> */}
                                     </>
                                 )} />
                         </div>
@@ -202,9 +253,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="deliveryDate"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Entrega Vehículo</label>
@@ -212,10 +260,15 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                             name={field.name}
                                             value={field.state.value}
                                             error={field.state.meta.errors.length > 0}
-                                            onChange={field.handleChange}
+                                            // maxDate={form.getFieldValue('preAlertDate') ?  : undefined}
+                                            onChange={(value) => {
+                                                // if (addToDate(form.getFieldValue('preAlertDate') as Date, 9, "days")) {
+
+                                                // }
+                                                field.handleChange(value)
+                                            }}
                                             onBlur={field.handleBlur}
                                         />
-                                        {/* <FieldInfo field={field} /> */}
                                     </>
                                 )} />
                         </div>
@@ -223,21 +276,16 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="preAlertDate"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Pre-alerta</label>
                                         <Calendar
                                             name={field.name}
                                             value={field.state.value}
-                                            maxDate={addToDate(form.getFieldValue('deliveryDate'), 9, "days")}
                                             error={field.state.meta.errors.length > 0}
                                             onChange={field.handleChange}
                                             onBlur={field.handleBlur}
                                         />
-                                        {/* <FieldInfo field={field} /> */}
                                     </>
                                 )} />
                         </div>
@@ -245,9 +293,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="contact"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Persona de contacto</label>
@@ -268,9 +313,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="email"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>E-mail</label>
@@ -291,9 +333,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="phone"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Teléfono</label>
@@ -304,6 +343,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                             error={field.state.meta.errors.length > 0}
                                             value={field.state.value}
                                             onBlur={field.handleBlur}
+                                            maxLength={10}
                                             onChange={(e) => field.handleChange(e.target.value)}
                                         />
                                         {/* <FieldInfo field={field} /> */}
@@ -321,9 +361,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="concessionerId"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Concesionario</label>
@@ -343,9 +380,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="typeVehicleId"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Vehículo</label>
@@ -365,9 +399,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="serie"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Serie</label>
@@ -388,9 +419,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="numberDua"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Número DUA</label>
@@ -411,9 +439,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="numberRemesa"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Número remesa</label>
@@ -441,9 +466,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="driverName"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Nombre completo</label>
@@ -464,9 +486,6 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="plate"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Placa</label>
@@ -486,7 +505,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                     </div>
                 </div>
 
-                <TableParts pieces={pieces} onAdd={(piece) => setPieces(pieces => [...pieces, piece])} />
+                <TableParts pieces={pieces} onAdd={(piece) => setPieces(pieces => [...pieces, piece])} actions={actions} />
 
                 <div className="flex justify-end mt-5">
                     <form.Subscribe

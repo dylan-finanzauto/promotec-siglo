@@ -1,49 +1,104 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ClipIcon from "../../../components/common/icons/ClipIcon";
 import Comment, { CommentType } from "../../../components/ui/Comment";
 import clsx from "clsx";
+import { useIdentifier } from "../../../hooks/useIdentifier";
+import { useMutation } from "@tanstack/react-query";
+import useAuth from "../../../hooks/useAuth";
+import { create, pagination } from "../../../services/comment";
+import { useForm } from "@tanstack/react-form";
+import { CommentRequest } from "../../../types/Rest";
+import { z } from 'zod'
+import TextareaField from "../../../components/common/TextareaField";
 
-const comments: CommentType[] = [
-    {
-        title: "Respuesta",
-        text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-        addedBy: "LOS COCHES",
-        attachs: [],
-        date: "30/06/2024",
-        isResponse: false,
-    },
-    {
-        title: "Respuesta",
-        text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-        addedBy: "CALIDAD TRAVESA AL DÍA",
-        attachs: [
-            "DOCUMENTO 1.DOCX",
-            "DOCUMENTO 1.DOCX",
-        ],
-        date: "30/06/2024",
-        isResponse: false,
-    },
-    {
-        title: "Respuesta",
-        text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.",
-        addedBy: "Daniela Latorre",
-        attachs: [
-            "DOCUMENTO 1.DOCX",
-        ],
-        date: "30/06/2024",
-        isResponse: true,
-    },
-]
+const commentSchema = z.object({
+    emails: z.array(z.string()),
+    comment: z.string().nonempty(),
+    files: z.array(z.object({
+        FileBase64: z.string(),
+        fileName: z.string()
+    }))
+})
 
 type Props = {}
 
 const FormComments: React.FC<Props> = () => {
+    const commentsContainerRef = useRef<HTMLDivElement>(null);
+    const { token } = useAuth()
+    const { id } = useIdentifier()
+    const [comments, setComments] = useState<CommentType[]>([])
+    const [page, setPage] = useState(1)
+
+    useEffect(() => {
+        if (commentsContainerRef.current) {
+            commentsContainerRef.current.scrollTop = commentsContainerRef.current.scrollHeight;
+        }
+    }, [comments]);
+
+    const mutation = useMutation({
+        mutationKey: ['comentarios'],
+        mutationFn: ({ id, data }: { id: string, data: Record<any, any> }) => pagination(token.accessToken, id, data),
+        onSuccess: (value) => {
+            const newComments = value.items.map(c => ({ title: "Respuesta", text: c.observation, addedBy: c.userName, attachs: c.files, date: c.created, isResponse: false }))
+
+            setComments((current) => {
+                (page * 5 - current.length % 5)
+                current.slice(0, value.totalCount - value.totalCount % 5)
+                if (page > 1) return [...current, ...newComments]
+                return newComments
+            })
+        }
+    })
+
+    const createMutation = useMutation({
+        mutationKey: ['createComment'],
+        mutationFn: ({ id, data }: { id: string, data: CommentRequest }) => create(token.accessToken, id, data),
+        onSuccess: (value) => {
+            console.log("respuesta creación: ", value)
+            mutation.mutate({ id: id ?? '', data: { pageNumber: 0, pageSize: 5 } })
+        }
+    })
+
+    useEffect(() => {
+        if (id) mutation.mutate({ id, data: { pageNumber: page, pageSize: 5 } })
+    }, [id])
+
+    const form = useForm({
+        defaultValues: {
+            emails: [
+                "calidad.travesa@aldialogistica.com"
+            ],
+            comment: "",
+            files: [] as {
+                FileBase64: string,
+                fileName: string
+            }[]
+        },
+        validators: {
+            onChange: commentSchema,
+        },
+        onSubmit: ({ value }) => {
+            if (!id) return
+            console.log("Value: ", value)
+            createMutation.mutate({ id, data: value })
+        }
+    })
+
+    const handleScroll = () => {
+        const elem = commentsContainerRef.current;
+        if (!elem) return
+        const scrollTop = elem.scrollTop
+        console.log("SCroll Top: ", scrollTop)
+        if (scrollTop > 0) return
+
+    }
+
     return (
         <>
             <h3 className="text-xl text-text font-bold">Información</h3>
             <div className="space-y-4">
                 <h4 className="text-secn-blue font-bold">Resumen de comentarios</h4>
-                <div className="p-4 rounded-xl border border-[#DEE5ED]">
+                <div ref={commentsContainerRef} onScroll={handleScroll} className="p-4 rounded-xl border border-[#DEE5ED] max-h-[395px] overflow-y-auto">
                     {comments.map((c, i) => (
                         <div className="grid grid-cols-[16px_1fr] gap-4" key={i}>
                             <div className="flex flex-col items-center">
@@ -61,13 +116,25 @@ const FormComments: React.FC<Props> = () => {
             <div className="space-y-4">
                 <h4 className="text-secn-blue font-bold">Agregar comentario de gestión</h4>
                 <div className="flex flex-col gap-1">
-                    <label className="text-[#2F3036] text-xs font-semibold"
-                    >Comentario de gestión</label>
-                    <textarea
-                        className="w-full px-3 py-[10px] rounded-lg outline-none bg-white border border-[#DEE5ED] min-h-24 text-sm text-[#7C93B5]"
-                        placeholder="Ingrese aquí su comentario"
-                        name=""
-                        id=""></textarea>
+                    <form.Field
+                        name="comment"
+                        children={(field) => (
+                            <>
+                                <label
+                                    className="text-[#2F3036] text-xs font-semibold"
+                                    htmlFor={field.name}
+                                >Comentario de gestión</label>
+                                <TextareaField
+                                    name={field.name}
+                                    placeholder="Ingrese aquí su comentario"
+                                    value={field.state.value}
+                                    error={field.state.meta.errors.length > 0}
+                                    onChange={field.handleChange}
+                                    onBlur={field.handleBlur}
+                                />
+                            </>
+                        )}
+                    />
                 </div>
             </div>
 
@@ -75,7 +142,7 @@ const FormComments: React.FC<Props> = () => {
                 <button className="border border-[#DEE5ED] rounded-lg grid place-items-center size-10 cursor-pointer">
                     <ClipIcon className="text-black" />
                 </button>
-                <button className="bg-tirth text-white flex items-center h-10 px-20 rounded-lg cursor-pointer">Enviar</button>
+                <button className="bg-tirth text-white flex items-center h-10 px-20 rounded-lg cursor-pointer" onClick={() => form.handleSubmit()}>Enviar</button>
             </div>
 
         </>

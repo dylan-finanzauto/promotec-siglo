@@ -6,7 +6,7 @@ import { router } from './routes/main'
 
 function App() {
     const auth = useAuth()
-    const { userMutation, consMutation, comMutation, emailMutation, sdMutation, tvMutation, tdMutation, tpMutation, attriMutation, stateMutation, typologyMutation } = useMutations()
+    const { userMutation, consMutation, comMutation, emailMutation, sdMutation, tvMutation, tdMutation, tpMutation, attriMutation, stateMutation, typologyMutation, roleMutation } = useMutations()
 
     useEffect(() => {
         const { token } = auth
@@ -24,6 +24,7 @@ function App() {
             attriMutation.mutate(accessToken)
             stateMutation.mutate(accessToken)
             typologyMutation.mutate(accessToken)
+            roleMutation.mutate(accessToken)
         }
     }, [auth])
 

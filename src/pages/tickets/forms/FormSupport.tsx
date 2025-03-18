@@ -9,55 +9,58 @@ import { useForm } from "@tanstack/react-form";
 import clsx from "clsx";
 import { InputField } from "../../../components/common/InputField";
 import SpinnerIcon from "../../../components/common/icons/SpinnerIcon";
-import { complete, files, update } from "../../../services/ticket";
+import { complete, downloadB64, downloadFile, files } from "../../../services/ticket";
 import useAuth from "../../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import TableSkeleton from "../../../components/common/TableSkeleton";
 import TextareaField from "../../../components/common/TextareaField";
 import { create as createComment } from "../../../services/comment";
-import { formatearFechaISO } from "../../../util/date";
+import { formatearFecha, formatearFechaISO } from "../../../util/date";
 import { useAlert } from "../../../hooks/useAlert";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useIdentifier } from "../../../hooks/useIdentifier";
 import { PostTicketComplete } from "../../../types/Rest";
+import { downloadBase64File } from "../../../util/file";
+import PdfDialog from "../../../components/ui/PdfDialog";
+import { z } from "zod";
 
-const cols = ["originalName", "size", "extension", "created", "createdBy"];
+interface RowFile {
+    ID: string;
+    Archivo: string;
+    Propietario: string;
+    "Fecha y hora": string;
+}
 
-const actions = [
-    {
-        text: "Ver detalle",
-        onClick: () => {
-            console.log("Ir al detalle");
-        },
-    },
-    {
-        text: "Descargar",
-        onClick: () => {
-            console.log("Ir a descargar");
-        },
-    },
-    {
-        text: "Editar",
-        onClick: () => {
-            console.log("Ir a editar");
-        },
-    },
-    {
-        text: "Eliminar",
-        onClick: () => {
-            console.log("Ir a eliminar");
-        },
-    },
-];
+const cols = ["ID", "Archivo", "Propietario", "Fecha y hora"];
 
 type Props = {
     onBack: () => void,
     onCreate: () => void,
 }
 
+const supportSchema = z.object({
+    alertDate: z.date().nullable(),
+    responseDate: z.date().nullable(),
+    requestDate: z.date().nullable(),
+    invoice: z.string(),
+    invoiceNumber: z.string(),
+    invoiceAmount: z.number(),
+    ticketAmount: z.number(),
+    firstPayment: z.number()
+})
+
+const commentSchema = z.object({
+    emails: z.array(z.string()).min(1),
+    comment: z.string().nonempty(),
+    files: z.array(z.object({
+        FileBase64: z.string(), fileName: z.string()
+    }))
+})
+
 const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
 
+    const [previewProps, setPreviewProps] = useState({ show: false, mediaType: 'application/pdf', b64: "" });
     const { id, changeId } = useIdentifier()
     const { token } = useAuth()
     const { addAlert } = useAlert()
@@ -68,30 +71,75 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
         console.log("Id", id)
     }, [id])
 
+    const actions = [
+        {
+            text: "Ver detalle",
+            onClick: (row: RowFile) => {
+                const fileSelected = data?.find(f => f.nodeId == row.ID)
+                if (!fileSelected) return
+                downloadB64(token.accessToken, fileSelected.nodeId)
+                    .then(res => {
+                        console.log("Ir al detalle: ", res);
+                        setPreviewProps(curr => ({
+                            ...curr,
+                            show: true,
+                            b64: res.base64
+                        }))
+                    })
+            },
+        },
+        {
+            text: "Descargar",
+            onClick: (row: RowFile) => {
+                downloadFile(token.accessToken, row.ID)
+                    .then(res => {
+                        downloadBase64File('application/octet-stream', res, row.Archivo)
+                    })
+            }
+        },
+        {
+            text: "Editar",
+            onClick: () => {
+                console.log("Ir a editar");
+            },
+        },
+        {
+            text: "Eliminar",
+            onClick: () => {
+                console.log("Ir a eliminar");
+            },
+        },
+    ];
+
     const form = useForm({
         defaultValues: {
-            alertDate: new Date(),
-            responseDate: new Date(),
-            requestDate: new Date(),
+            alertDate: null as null | Date,
+            responseDate: null as null | Date,
+            requestDate: null as null | Date,
             invoice: '',
             invoiceNumber: '',
             invoiceAmount: 0,
             ticketAmount: 0,
             firstPayment: 0,
-            emailId: 0
+        },
+        validators: {
+            onChange: supportSchema
         },
         onSubmit: async ({ value }) => {
             if (!id) return
 
             console.log("Comentario: ", commentForm.state.values)
-            if (!commentForm.state.isValid) addAlert("error", "Crear siniestro", "Existen campos pendientes por diligenciar, para poder continuar con el proceso.")
+            if (!commentForm.state.isValid) {
+                addAlert("error", "Crear siniestro", "Existen campos pendientes por diligenciar, para poder continuar con el proceso.")
+                return
+            }
 
             // commentForm.handleSubmit()
             const data = {
                 ...value,
-                alertDate: formatearFechaISO(value.alertDate),
-                responseDate: formatearFechaISO(value.responseDate),
-                requestDate: formatearFechaISO(value.requestDate),
+                alertDate: value.alertDate ? formatearFechaISO(value.alertDate) : '',
+                responseDate: value.responseDate ? formatearFechaISO(value.responseDate) : '',
+                requestDate: value.requestDate ? formatearFechaISO(value.requestDate) : '',
                 comments: [
                     commentForm.state.values
                 ]
@@ -106,8 +154,8 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                     <div className="space-y-4">
                         <h6 className="font-semibold">El proceso se ha finalizado de manera exitosa.</h6>
                         <div className="">
-                            <p>2024-01-5815 -- </p>
-                            <p>Se ha dado respuesta a la Reclamación No. 2024-01-5815, debe ingresar a la herramienta de gestión y continuar con el proceso.</p>
+                            <p>{response.sequenceId} -- </p>
+                            <p>Se ha dado respuesta a la Reclamación No. {response.sequenceId}.</p>
                         </div>
                         <div className="">
                             <p><b>Concesionario: </b>{response.concessionerId}</p>
@@ -133,6 +181,9 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
             comment: '' as string,
             files: [] as { FileBase64: string, fileName: string }[]
         },
+        validators: {
+            onChange: commentSchema
+        },
         onSubmit: ({ value }) => {
             if (!id) return
             createComment(token.accessToken, id, value)
@@ -143,14 +194,30 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
         queryKey: ['files'],
         queryFn: async () => {
             if (!id) return
+            // const ticketFiles: RowFile[] = (await files(token.accessToken, id)).map(f => ({
+            //     ID: f.nodeId,
+            //     Archivo: f.originalName,
+            //     Propietario: f.createdBy,
+            //     "Fecha y hora": formatearFecha(f.created)
+            // }))
+
             const ticketFiles = await files(token.accessToken, id)
+
             console.log("ticket files: ", ticketFiles)
             return ticketFiles;
         },
     })
 
+    const tableFiles = useMemo(() => data?.map(f => ({
+        ID: f.nodeId,
+        Archivo: f.originalName,
+        Propietario: f.createdBy,
+        "Fecha y hora": formatearFecha(f.created)
+    })), [data])
+
     return (
         <>
+            <PdfDialog b64={previewProps.b64} mediaType={previewProps.mediaType} isOpen={previewProps.show} onClose={() => setPreviewProps(v => ({ ...v, show: false }))} />
             <div className="bg-white rounded-[14px] p-5 space-y-5">
                 <h3 className="text-xl text-text font-bold">
                     Formulario novedades / reclamos
@@ -177,10 +244,10 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
 
                             {isLoading ? (
                                 <TableSkeleton cols={cols} rows={5} />
-                            ) : data && (
+                            ) : tableFiles && (
                                 <Table
                                     cols={cols}
-                                    data={data}
+                                    data={tableFiles}
                                     actions={actions}
                                 />
                             )}
@@ -194,9 +261,6 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="alertDate"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Aviso transportador</label>
@@ -214,9 +278,6 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="responseDate"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Respuesta transportador</label>
@@ -234,9 +295,6 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="requestDate"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Solicitud factura concesionario</label>
@@ -260,9 +318,6 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="invoice"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Recibo factura</label>
@@ -282,9 +337,6 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="invoiceNumber"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Número factura</label>
@@ -304,9 +356,6 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="invoiceAmount"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Vr. factura</label>
@@ -326,9 +375,6 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="ticketAmount"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Valor reclamo</label>
@@ -348,9 +394,6 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                         <div className="flex flex-col gap-1">
                             <form.Field
                                 name="firstPayment"
-                                validators={{
-                                    onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                                }}
                                 children={(field) => (
                                     <>
                                         <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Valor primer tramo</label>

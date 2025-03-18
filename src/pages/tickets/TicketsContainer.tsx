@@ -23,7 +23,7 @@ const TicketsContainer: React.FC = () => {
         <Dashboard>
             <div className="flex flex-col gap-2">
                 <h1 className="font-bold text-2xl text-text">
-                    Bienvenida, {`${user.name} ${user.lastName}`}
+                    Bienvenid@, {`${user.name} ${user.lastName}`}
                 </h1>
                 <p className="text-sm text-text2">
                     Esta es la información que tenemos para mostrarte

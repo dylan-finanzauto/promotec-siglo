@@ -2,6 +2,7 @@ import { createRoute, redirect } from "@tanstack/react-router";
 import rootRoute from "./__root";
 import { Role } from "../types/Auth";
 import DetailContainer from "../pages/detail/DetailContainer";
+import IdentifierProvider from "../providers/IdentifierProvider";
 
 const roles = ["SGL-Promotec"] as Role[]
 
@@ -15,7 +16,11 @@ const detailRoute = createRoute({
             })
         }
     },
-    component: () => <DetailContainer />
+    component: () => (
+        <IdentifierProvider>
+            <DetailContainer />
+        </IdentifierProvider>
+    )
 })
 
 export default detailRoute;

@@ -17,19 +17,25 @@ type Props = {
     onBlur: () => void;
 };
 
-export default function Select({ items, className, name, value, error, onChange, onBlur }: Props) {
+export default function Select({ items, className, value, error, onChange, onBlur }: Props) {
     const [isOpen, setIsOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<null | Item>(items.find(item => item.value === value) || null);
+    const [selectedItem, setSelectedItem] = useState<null | Item>(() => {
+        return items.find(item => item.value == value) || null
+    });
     const containerRef = useRef<HTMLDivElement>(null);
     const selectRef = useRef<HTMLDivElement>(null);
     const [actionPosition, setActionPosition] = useState<{ top?: number; left?: number; bottom?: number } | null>(null);
 
     const toggleDropdown = () => setIsOpen(!isOpen);
     const handleSelect = (item: Item) => {
-        setSelectedItem(item);
+        // setSelectedItem(item);
         setIsOpen(false);
         onChange(item.value);
     };
+
+    useEffect(() => {
+        setSelectedItem(items.find(item => item.value == value) || null)
+    }, [value])
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -66,8 +72,8 @@ export default function Select({ items, className, name, value, error, onChange,
         <div className="" ref={containerRef}>
             <div
                 className={clsx(
-                    "h-10 border border-[#DEE5ED] rounded-lg px-3 py-[10px] flex justify-between items-center gap-2 cursor-pointer",
-                    isOpen ? "outline-2" : "",
+                    "h-10 shadow-sm border border-[#DEE5ED] rounded-lg px-3 py-[10px] flex justify-between items-center gap-2 cursor-pointer",
+                    isOpen ? "outline" : "",
                     isOpen && error ? "outline-red-500" : "outline-secn-blue",
                     error ? "border-red-500" : "",
                     className

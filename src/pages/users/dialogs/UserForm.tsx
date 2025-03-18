@@ -3,6 +3,7 @@ import CheckCircleIcon from "../../../components/common/icons/CheckCircleIcon";
 import AlertIcon from "../../../components/common/icons/AlertIcon";
 import InfoCircleIcon from "../../../components/common/icons/InfoCircleIcon";
 import Select from "../../../components/common/Select";
+import { useForm } from "@tanstack/react-form";
 
 const icons = {
     success: (<div className="shrink-0 size-16 rounded-full grid place-items-center bg-princ-blue"><CheckCircleIcon className="text-secn-blue size-8" /></div>),
@@ -17,6 +18,16 @@ type Props = {
 }
 
 const UserForm: React.FC<Props> = ({ onCreate, onCancel }) => {
+
+    const form = useForm({
+        defaultValues: {
+            rol: 0
+        },
+        onSubmit: ({ value }) => {
+            console.log(value)
+        }
+    })
+
     return (
         <>
             <div className="fixed inset-0 z-50 bg-[#000C3E]/50 backdrop-blur-sm"></div>
@@ -39,9 +50,23 @@ const UserForm: React.FC<Props> = ({ onCreate, onCancel }) => {
                                 </div>
 
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-[#2F3036] text-xs font-semibold"
-                                    >Rol</label>
-                                    <Select items={[]} />
+                                    <form.Field
+                                        name="rol"
+                                        children={(field) => (
+                                            <>
+                                                <label className="text-[#2F3036] text-xs font-semibold"
+                                                >{field.name}</label>
+                                                <Select
+                                                    items={[]}
+                                                    name={field.name}
+                                                    value={field.state.value}
+                                                    error={field.state.meta.errors.length > 0}
+                                                    onChange={field.handleChange}
+                                                    onBlur={field.handleBlur}
+                                                />
+                                            </>
+                                        )}
+                                    />
                                 </div>
 
                                 <div className="flex flex-col gap-1">

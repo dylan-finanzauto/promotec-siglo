@@ -3,7 +3,7 @@ import OptionsIcon from "./icons/OptionsIcon";
 
 type Action = {
     text: string,
-    onClick: () => void
+    onClick: (row: any) => void
 }
 
 type Props = {
@@ -48,7 +48,7 @@ const Table: React.FC<Props> = ({ cols, data, actions }) => {
                             {cols.map((col, index) => (
                                 <th key={index} className="text-sm px-4 text-center py-5 font-medium whitespace-nowrap text-text2 border-b border-[#DEE5ED]">{col}</th>
                             ))}
-                            <th className="px-3 py-2 border-b border-[#DEE5ED]"></th>
+                            {actions && <th className="px-3 py-2 border-b border-[#DEE5ED] font-medium whitespace-nowrap text-text2 text-sm">Acción</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -75,7 +75,7 @@ const Table: React.FC<Props> = ({ cols, data, actions }) => {
                     <ul className="w-[180px] max-h-[248px] overflow-y-auto rounded-lg py-2 bg-white border border-[#DEE5ED] mt-1 shadow-lg">
                         <li className="py-3 px-4 font-semibold">Acciones</li>
                         {actions.map((action, index) => (
-                            <li key={index} className="py-3 px-4 cursor-pointer hover:bg-white2" onClick={action.onClick}>{action.text}</li>
+                            <li key={index} className="py-3 px-4 cursor-pointer hover:bg-white2" onClick={() => action.onClick(rowSelected)}>{action.text}</li>
                         ))}
                     </ul>
                 </div>

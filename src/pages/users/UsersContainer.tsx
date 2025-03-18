@@ -93,7 +93,7 @@ const UsersContainer: React.FC = () => {
 
                         <Table cols={cols} data={data} actions={actions} />
 
-                        <Pagination />
+                        <Pagination page={1} pageSize={5} totalCount={10} onPageChange={() => { }} hasNextPage={false} hasPreviousPage={false} />
 
                     </div>
                 </div>

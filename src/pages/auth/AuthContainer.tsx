@@ -38,7 +38,7 @@ const ContainerAuth: React.FC<Props> = () => {
             }, 500);
         },
         onError: (error: AxiosError) => {
-            addAlert("error", error.name, error.message)
+            addAlert("error", "Error", "Usuario inválido")
         },
     });
 

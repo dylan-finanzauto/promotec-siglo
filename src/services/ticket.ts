@@ -1,6 +1,6 @@
 import axios from "axios";
-import { Piece, Ticket } from "../types/Ticket";
-import { Piece as AddPiece, CompleteResponse, PostTicket, PostTicketComplete } from "../types/Rest";
+import { Piece, Ticket, File, TicketResult } from "../types/Ticket";
+import { Piece as AddPiece, CompleteResponse, PaginatedResponse, PostTicket, PostTicketComplete } from "../types/Rest";
 
 const detail = async (accessToken: string, id: string): Promise<Ticket> => {
     try {
@@ -112,7 +112,7 @@ const addFiles = async (accessToken: string, id: number): Promise<any> => {
     }
 };
 
-const pieces = async (accessToken: string, id: string): Promise<Piece[]> => {
+const pieces = async (accessToken: string, id: string): Promise<any[]> => {
     try {
         const response = await axios.get<any>(
             // 'http://192.168.40.106/Promotec.Siglo.Api/api/master/attributable',
@@ -133,11 +133,32 @@ const pieces = async (accessToken: string, id: string): Promise<Piece[]> => {
     }
 };
 
-const files = async (accessToken: string, id: string): Promise<any[]> => {
+const files = async (accessToken: string, id: string): Promise<File[]> => {
+    try {
+        const response = await axios.get<File[]>(
+            // 'http://192.168.40.106/Promotec.Siglo.Api/api/master/attributable',
+            `${import.meta.env.VITE_API_URL}/ticket/file/${id}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        return response.data;
+    } catch (error) {
+        if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+            throw new Error('Request timed out');
+        }
+        throw error;
+    }
+};
+
+const downloadFile = async (accessToken: string, id: string): Promise<any> => {
     try {
         const response = await axios.get<any>(
             // 'http://192.168.40.106/Promotec.Siglo.Api/api/master/attributable',
-            `${import.meta.env.VITE_API_URL}/ticket/file/${id}`,
+            `${import.meta.env.VITE_API_URL}/ticket/dowwload-file/${id}`,
             {
                 headers: {
                     Authorization: `Bearer ${accessToken}`
@@ -176,4 +197,47 @@ const complete = async (accessToken: string, id: string, data: PostTicketComplet
     }
 };
 
-export { detail, create, complete, update, pieces, addPieces, files, addFiles }
+const pagination = async (accessToken: string, data: Record<any, any>): Promise<PaginatedResponse<TicketResult>> => {
+    try {
+        const searchParams = new URLSearchParams(data)
+        const response = await axios.get<PaginatedResponse<TicketResult>>(
+            // 'http://192.168.40.106/Promotec.Siglo.Api/api/master/attributable',
+            `${import.meta.env.VITE_API_URL}/ticket/pagination?${searchParams.toString()}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        return response.data;
+    } catch (error) {
+        if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+            throw new Error('Request timed out');
+        }
+        throw error;
+    }
+};
+
+const downloadB64 = async (accessToken: string, id: string): Promise<any> => {
+    try {
+        const response = await axios.get<any>(
+            // 'http://192.168.40.106/Promotec.Siglo.Api/api/master/attributable',
+            `${import.meta.env.VITE_API_URL}/ticket/download-base64/${id}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        return response.data;
+    } catch (error) {
+        if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+            throw new Error('Request timed out');
+        }
+        throw error;
+    }
+};
+
+export { detail, create, complete, update, pieces, addPieces, files, addFiles, downloadFile, pagination, downloadB64 }
