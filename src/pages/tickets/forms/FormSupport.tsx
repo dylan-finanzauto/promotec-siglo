@@ -18,12 +18,13 @@ import { create as createComment } from "../../../services/comment";
 import { formatearFecha, formatearFechaISO } from "../../../util/date";
 import { useAlert } from "../../../hooks/useAlert";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useIdentifier } from "../../../hooks/useIdentifier";
 import { PostTicketComplete } from "../../../types/Rest";
 import { downloadBase64File } from "../../../util/file";
-import PdfDialog from "../../../components/ui/PdfDialog";
 import { z } from "zod";
+import PreviewerDialog from "../../../components/ui/PreviewerDialog";
+import { getMimeType } from "../../../util/mime";
 
 interface RowFile {
     ID: string;
@@ -60,16 +61,12 @@ const commentSchema = z.object({
 
 const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
 
-    const [previewProps, setPreviewProps] = useState({ show: false, mediaType: 'application/pdf', b64: "" });
+    const [previewProps, setPreviewProps] = useState({ show: false, mediaType: '', b64: "", title: '' });
     const { id, changeId } = useIdentifier()
     const { token } = useAuth()
     const { addAlert } = useAlert()
     const navigate = useNavigate()
     const { emails } = useStore((state) => state);
-
-    useEffect(() => {
-        console.log("Id", id)
-    }, [id])
 
     const actions = [
         {
@@ -82,8 +79,10 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                         console.log("Ir al detalle: ", res);
                         setPreviewProps(curr => ({
                             ...curr,
+                            title: res.name,
                             show: true,
-                            b64: res.base64
+                            b64: res.base64,
+                            mediaType: getMimeType(res.extension)
                         }))
                     })
             },
@@ -137,9 +136,9 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
             // commentForm.handleSubmit()
             const data = {
                 ...value,
-                alertDate: value.alertDate ? formatearFechaISO(value.alertDate) : '',
-                responseDate: value.responseDate ? formatearFechaISO(value.responseDate) : '',
-                requestDate: value.requestDate ? formatearFechaISO(value.requestDate) : '',
+                alertDate: value.alertDate ? formatearFechaISO(value.alertDate) : null,
+                responseDate: value.responseDate ? formatearFechaISO(value.responseDate) : null,
+                requestDate: value.requestDate ? formatearFechaISO(value.requestDate) : null,
                 comments: [
                     commentForm.state.values
                 ]
@@ -194,13 +193,6 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
         queryKey: ['files'],
         queryFn: async () => {
             if (!id) return
-            // const ticketFiles: RowFile[] = (await files(token.accessToken, id)).map(f => ({
-            //     ID: f.nodeId,
-            //     Archivo: f.originalName,
-            //     Propietario: f.createdBy,
-            //     "Fecha y hora": formatearFecha(f.created)
-            // }))
-
             const ticketFiles = await files(token.accessToken, id)
 
             console.log("ticket files: ", ticketFiles)
@@ -217,7 +209,7 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
 
     return (
         <>
-            <PdfDialog b64={previewProps.b64} mediaType={previewProps.mediaType} isOpen={previewProps.show} onClose={() => setPreviewProps(v => ({ ...v, show: false }))} />
+            <PreviewerDialog title={previewProps.title} b64={previewProps.b64} mediaType={previewProps.mediaType} isOpen={previewProps.show} onClose={() => setPreviewProps(v => ({ ...v, show: false }))} />
             <div className="bg-white rounded-[14px] p-5 space-y-5">
                 <h3 className="text-xl text-text font-bold">
                     Formulario novedades / reclamos
@@ -236,7 +228,7 @@ const SupportForm: React.FC<Props> = ({ onBack, onCreate }) => {
                                     Registro fotográfico / Factura de venta</b>
                             </p>
                         </div>
-                        {id && <FileUpload id={id} onUpload={() => refetch()} />}
+                        {id && <FileUpload url={`${import.meta.env.VITE_API_URL}/ticket/add-files/${id}`} onUpload={() => refetch()} />}
                         <div
                             className="p-5 rounded-[10px] border border-princ-blue space-y-3"
                         >

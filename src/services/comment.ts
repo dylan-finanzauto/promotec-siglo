@@ -1,5 +1,5 @@
 import axios from "axios";
-import { CommentRequest, CommentResponse, PaginatedResponse, PaginationResponse } from "../types/Rest";
+import { CommentRequest, CommentResponse, PaginatedResponse } from "../types/Rest";
 
 const create = async (accessToken: string, id: string, data: CommentRequest): Promise<any> => {
     try {

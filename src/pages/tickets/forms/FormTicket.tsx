@@ -10,7 +10,7 @@ import TableParts from "../tables/TableParts";
 import SpinnerIcon from "../../../components/common/icons/SpinnerIcon";
 import { useEffect, useState } from "react";
 import { Piece } from "../../../types/Rest";
-import { create, detail, update, pieces as ticketPieces } from "../../../services/ticket";
+import { create, detail, update, pieces as ticketPieces, addPieces } from "../../../services/ticket";
 import useAuth from "../../../hooks/useAuth";
 import { addToDate, formatearFechaISO } from "../../../util/date";
 import { useAlert } from "../../../hooks/useAlert";
@@ -48,6 +48,10 @@ const ticketSchema = z.object({
     plate: z.string().nonempty()
 })
 
+interface PieceState extends Piece {
+    id: number
+}
+
 type Props = {
     onSave: () => void
 }
@@ -61,7 +65,8 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
     const { concessioners } = concStore((state) => state)
     const { companies } = comStore((state) => state)
     const { typeVehicles } = tvStore((state) => state)
-    const [pieces, setPieces] = useState<Piece[]>([])
+    const [pieces, setPieces] = useState<PieceState[]>([])
+    const [piece2Edit, setPiece2Edit] = useState<PieceState | null>(null);
 
     useEffect(() => {
         if (!id) return
@@ -73,17 +78,18 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
     const actions = [
         {
             text: "Editar",
-            onClick: () => {
-                console.log("Ir a editar");
+            onClick: (row: PieceState) => {
+                setPieces(curr => curr.filter((p) => {
+                    return p.id != row.id
+                }))
+                setPiece2Edit(row)
             },
         },
         {
             text: "Eliminar",
-            onClick: (row: Piece) => {
-                console.log("Ir a eliminar");
-                setPieces(curr => curr.filter(p => {
-
-                    return p != row
+            onClick: (row: PieceState) => {
+                setPieces(curr => curr.filter((p) => {
+                    return p.id != row.id
                 }))
             },
         },
@@ -103,7 +109,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
         mutationFn: (id: string) => ticketPieces(token.accessToken, id),
         onSuccess: (data) => {
             // console.log("Data: ", data)
-            setPieces(data.map(p => ({ amount: p.amount, attributableId: p.attributableName, count: p.count, replace: p.replace, sizeDamageId: p.sizeDamageName, stateId: p.stateIdName, typeDamageId: p.typeDamageName, typePieceId: p.typePieceName, typologyId: p.typologyName })))
+            setPieces(data.map((p, i) => ({ id: i, amount: p.amount, attributableId: p.attributableName, count: p.count, replace: p.replace, sizeDamageId: p.sizeDamageName, stateId: p.stateIdName, typeDamageId: p.typeDamageName, typePieceId: p.typePieceName, typologyId: p.typologyName })))
         }
     })
 
@@ -132,6 +138,11 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
         onSubmit: async ({ value }) => {
             try {
 
+                if (pieces.length <= 0) {
+                    addAlert("error", "Crear siniestro", "No ha diligenciado ninguna pieza")
+                    return
+                }
+
                 const data = {
                     ...value,
                     ocurrencyDate: value.ocurrencyDate ? formatearFechaISO(value.ocurrencyDate) : '',
@@ -139,10 +150,14 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                     preAlertDate: value.preAlertDate ? formatearFechaISO(value.preAlertDate) : '',
                 }
 
-                console.log("data: ", data)
+                console.log("data: ", {
+                    ...data,
+                    pieces
+                })
 
                 if (id) {
                     await update(token.accessToken, id, data)
+                    await addPieces(token.accessToken, id, pieces)
                     onSave()
                     return
                 }
@@ -162,6 +177,15 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
             addAlert("error", "Crear siniestro", "Existen campos pendientes por diligenciar, para poder continuar con el proceso.")
         }
     })
+
+    const handleAdd = (piece: Piece) => {
+        setPieces(pieces => [...pieces, { ...piece, id: pieces.length }])
+        setPiece2Edit(null)
+    }
+
+    const handleTrash = () => {
+        setPiece2Edit(null)
+    }
 
     return (
         <>
@@ -238,12 +262,15 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                 name="ocurrencyDate"
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Ocurrencia Novedad</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Ocurrencia Novedad</label>
                                         <Calendar
                                             name={field.name}
                                             value={field.state.value}
                                             error={field.state.meta.errors.length > 0}
-                                            onChange={field.handleChange}
+                                            maxDate={new Date()}
+                                            onChange={(value) => {
+                                                field.handleChange(value)
+                                            }}
                                             onBlur={field.handleBlur}
                                         />
                                     </>
@@ -255,16 +282,18 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                 name="deliveryDate"
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Entrega Vehículo</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Entrega Vehículo</label>
                                         <Calendar
                                             name={field.name}
                                             value={field.state.value}
                                             error={field.state.meta.errors.length > 0}
-                                            // maxDate={form.getFieldValue('preAlertDate') ?  : undefined}
+                                            maxDate={new Date()}
                                             onChange={(value) => {
-                                                // if (addToDate(form.getFieldValue('preAlertDate') as Date, 9, "days")) {
-
-                                                // }
+                                                const limit = addToDate(form.getFieldValue('preAlertDate') as Date, -10, "days")
+                                                if (value && (value < limit)) {
+                                                    addAlert("info", "Tener en cuenta", "La diferencia entre la fecha de Pre-Alerta y la entrega del vehículo, no puede ser mayor a 9 día hábiles")
+                                                    return;
+                                                }
                                                 field.handleChange(value)
                                             }}
                                             onBlur={field.handleBlur}
@@ -282,6 +311,8 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                         <Calendar
                                             name={field.name}
                                             value={field.state.value}
+                                            minDate={addToDate(new Date(), -1, "days")}
+                                            maxDate={new Date()}
                                             error={field.state.meta.errors.length > 0}
                                             onChange={field.handleChange}
                                             onBlur={field.handleBlur}
@@ -363,7 +394,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                 name="concessionerId"
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Concesionario</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Concesionario</label>
                                         <Select
                                             items={concessioners.map(c => ({ key: c.name, value: c.id }))}
                                             name={field.name}
@@ -382,7 +413,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                 name="typeVehicleId"
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Vehículo</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Vehículo</label>
                                         <Select
                                             items={typeVehicles.map(c => ({ key: c.name, value: c.id }))}
                                             name={field.name}
@@ -401,7 +432,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                 name="serie"
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Serie</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Serie</label>
                                         <InputField
                                             type="text"
                                             id={field.name}
@@ -421,7 +452,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                 name="numberDua"
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Número DUA</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Número DUA</label>
                                         <InputField
                                             type="text"
                                             id={field.name}
@@ -441,7 +472,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                 name="numberRemesa"
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Número remesa</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Número remesa</label>
                                         <InputField
                                             type="text"
                                             id={field.name}
@@ -468,7 +499,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                 name="driverName"
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Nombre completo</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Nombre completo</label>
                                         <InputField
                                             type="text"
                                             id={field.name}
@@ -488,7 +519,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                                 name="plate"
                                 children={(field) => (
                                     <>
-                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Placa</label>
+                                        <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Placa</label>
                                         <InputField
                                             type="text"
                                             id={field.name}
@@ -505,7 +536,7 @@ const FormTicket: React.FC<Props> = ({ onSave }) => {
                     </div>
                 </div>
 
-                <TableParts pieces={pieces} onAdd={(piece) => setPieces(pieces => [...pieces, piece])} actions={actions} />
+                <TableParts pieces={pieces} edit={piece2Edit} onAdd={handleAdd} actions={actions} onTrash={handleTrash} />
 
                 <div className="flex justify-end mt-5">
                     <form.Subscribe

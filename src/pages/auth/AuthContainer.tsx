@@ -3,7 +3,6 @@ import { useState } from "react";
 import clsx from "clsx";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 import useAuth from "../../hooks/useAuth";
 import { LoginResponse } from "../../types/Rest";
 import { login } from "../../services/auth";
@@ -37,7 +36,7 @@ const ContainerAuth: React.FC<Props> = () => {
                 setShowLoader(true);
             }, 500);
         },
-        onError: (error: AxiosError) => {
+        onError: () => {
             addAlert("error", "Error", "Usuario inválido")
         },
     });

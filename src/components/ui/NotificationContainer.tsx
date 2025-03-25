@@ -41,6 +41,18 @@ const NotificationContainer: React.FC<Props> = () => {
         };
     }, [])
 
+    useEffect(() => {
+        if (isFocus) {
+            document.body.style.overflowY = 'hidden';
+        } else {
+            document.body.style.overflowY = 'auto';
+        }
+
+        return () => {
+            document.body.style.overflowY = 'auto';
+        }
+    }, [isFocus])
+
     const handleDelete = (notification: Notification) => {
         setNotifications((val) => val.filter(n => n.id !== notification.id))
     }

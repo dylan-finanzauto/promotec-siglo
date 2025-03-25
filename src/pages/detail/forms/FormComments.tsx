@@ -1,15 +1,17 @@
-import React, { useEffect, useRef, useState } from "react";
-import ClipIcon from "../../../components/common/icons/ClipIcon";
-import Comment, { CommentType } from "../../../components/ui/Comment";
-import clsx from "clsx";
-import { useIdentifier } from "../../../hooks/useIdentifier";
-import { useMutation } from "@tanstack/react-query";
-import useAuth from "../../../hooks/useAuth";
-import { create, pagination } from "../../../services/comment";
-import { useForm } from "@tanstack/react-form";
-import { CommentRequest } from "../../../types/Rest";
-import { z } from 'zod'
-import TextareaField from "../../../components/common/TextareaField";
+import { useMutation } from '@tanstack/react-query';
+import React, { useState, useEffect, useRef } from 'react';
+import { create, pagination } from '../../../services/comment';
+import useAuth from '../../../hooks/useAuth';
+import Comment, { CommentType } from '../../../components/ui/Comment';
+import clsx from 'clsx';
+import { useIdentifier } from '../../../hooks/useIdentifier';
+import { CommentRequest, PaginationResponse } from '../../../types/Rest';
+import TextareaField from '../../../components/common/TextareaField';
+import ClipIcon from '../../../components/common/icons/ClipIcon';
+import { useForm } from '@tanstack/react-form';
+import { z } from 'zod';
+import SpinnerIcon from '../../../components/common/icons/SpinnerIcon';
+import { useStore } from '../../../store/user';
 
 const commentSchema = z.object({
     emails: z.array(z.string()),
@@ -18,50 +20,95 @@ const commentSchema = z.object({
         FileBase64: z.string(),
         fileName: z.string()
     }))
-})
+});
 
-type Props = {}
-
-const FormComments: React.FC<Props> = () => {
-    const commentsContainerRef = useRef<HTMLDivElement>(null);
-    const { token } = useAuth()
-    const { id } = useIdentifier()
-    const [comments, setComments] = useState<CommentType[]>([])
-    const [page, setPage] = useState(1)
+const FormComments: React.FC = () => {
+    const [loading, setLoading] = useState(false);
+    const { user } = useStore((state) => state);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+    const { token } = useAuth();
+    const [comments, setComments] = useState<CommentType[]>([]);
+    const [paginationResp, setPaginationResp] = useState<PaginationResponse>({
+        hasNextPage: false,
+        hasPreviousPage: false,
+        page: 1,
+        pageSize: 5,
+        totalCount: 0
+    })
+    const { id } = useIdentifier();
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
-        if (commentsContainerRef.current) {
-            commentsContainerRef.current.scrollTop = commentsContainerRef.current.scrollHeight;
+        if (id) mutation.mutate({ id, data: { pageNumber: paginationResp.page, pageSize: 5 } });
+    }, [id]);
+
+    const handleScroll = () => {
+
+        if (!id || !paginationResp.hasNextPage) return
+
+        if (chatContainerRef.current) {
+            if (chatContainerRef.current.scrollTop === 0) {
+                setPaginationResp(curr => {
+                    mutation.mutate({ id, data: { pageNumber: curr.page + 1, pageSize: 5 } });
+                    return {
+                        ...curr,
+                        page: curr.page + 1
+                    }
+                });
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.addEventListener('scroll', handleScroll);
+            return () => {
+                chatContainerRef.current?.removeEventListener('scroll', handleScroll)
+            };
         }
     }, [comments]);
+
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [comments]);
+
+    const createMutation = useMutation({
+        mutationKey: ['createComment'],
+        mutationFn: ({ id, data }: { id: string, data: CommentRequest }) => create(token.accessToken, id, data),
+        onSuccess: () => {
+            console.log("form state: ", form.state.values)
+            setIsSubmitting(false)
+            mutation.mutate({ id: id ?? '', data: { pageNumber: 1, pageSize: (comments.length < 5 ? 5 : comments.length) - (comments.length % 5) } });
+            form.reset()
+        }
+    });
 
     const mutation = useMutation({
         mutationKey: ['comentarios'],
         mutationFn: ({ id, data }: { id: string, data: Record<any, any> }) => pagination(token.accessToken, id, data),
         onSuccess: (value) => {
-            const newComments = value.items.map(c => ({ title: "Respuesta", text: c.observation, addedBy: c.userName, attachs: c.files, date: c.created, isResponse: false }))
+            setPaginationResp({
+                hasNextPage: value.hasNextPage,
+                hasPreviousPage: value.hasPreviousPage,
+                page: value.page,
+                pageSize: value.pageSize,
+                totalCount: value.totalCount
+            })
+            const newComments = value.items.map(c => ({ title: "Respuesta", text: c.observation, addedBy: c.userName, attachs: c.files, date: c.created, isResponse: c.userName == user.userName }));
+            console.log("new comments: ", newComments)
 
             setComments((current) => {
-                (page * 5 - current.length % 5)
+                (value.page * 5 - current.length % 5)
                 current.slice(0, value.totalCount - value.totalCount % 5)
-                if (page > 1) return [...current, ...newComments]
+                if (value.page > 1) return [...current, ...newComments]
                 return newComments
             })
-        }
-    })
 
-    const createMutation = useMutation({
-        mutationKey: ['createComment'],
-        mutationFn: ({ id, data }: { id: string, data: CommentRequest }) => create(token.accessToken, id, data),
-        onSuccess: (value) => {
-            console.log("respuesta creación: ", value)
-            mutation.mutate({ id: id ?? '', data: { pageNumber: 0, pageSize: 5 } })
+            setLoading(false);
         }
-    })
-
-    useEffect(() => {
-        if (id) mutation.mutate({ id, data: { pageNumber: page, pageSize: 5 } })
-    }, [id])
+    });
 
     const form = useForm({
         defaultValues: {
@@ -78,41 +125,55 @@ const FormComments: React.FC<Props> = () => {
             onChange: commentSchema,
         },
         onSubmit: ({ value }) => {
-            if (!id) return
-            console.log("Value: ", value)
-            createMutation.mutate({ id, data: value })
+            if (!id) return;
+            console.log("Value: ", value);
+            setIsSubmitting(true)
+            createMutation.mutate({ id, data: value });
         }
-    })
+    });
 
-    const handleScroll = () => {
-        const elem = commentsContainerRef.current;
-        if (!elem) return
-        const scrollTop = elem.scrollTop
-        console.log("SCroll Top: ", scrollTop)
-        if (scrollTop > 0) return
-
-    }
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                form.setFieldValue("files", [
+                    ...form.getFieldValue("files"),
+                    {
+                        FileBase64: reader.result as string,
+                        fileName: file.name
+                    }
+                ]);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     return (
         <>
             <h3 className="text-xl text-text font-bold">Información</h3>
             <div className="space-y-4">
                 <h4 className="text-secn-blue font-bold">Resumen de comentarios</h4>
-                <div ref={commentsContainerRef} onScroll={handleScroll} className="p-4 rounded-xl border border-[#DEE5ED] max-h-[395px] overflow-y-auto">
+                <div
+                    ref={chatContainerRef}
+                    style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column-reverse' }}
+                >
                     {comments.map((c, i) => (
-                        <div className="grid grid-cols-[16px_1fr] gap-4" key={i}>
+                        <div className="grid grid-cols-[16px_1fr] gap-4 pr-8" key={i}>
                             <div className="flex flex-col items-center">
-                                <span className={clsx("w-[2px] h-4", i != 0 ? "bg-secn-blue" : "")}></span>
+                                <span className={clsx("w-[2px] h-4", i != comments.length - 1 ? "bg-secn-blue" : "")}></span>
                                 <span className="size-4 bg-secn-blue rounded-full shrink-0"></span>
-                                {!(i == comments.length - 1) && (
+                                {!(i == 0) && (
                                     <span className="w-[2px] h-full bg-secn-blue"></span>
                                 )}
                             </div>
                             <Comment comment={c} />
                         </div>
                     ))}
+                    {loading && <div>Loading more messages...</div>}
                 </div>
             </div>
+
             <div className="space-y-4">
                 <h4 className="text-secn-blue font-bold">Agregar comentario de gestión</h4>
                 <div className="flex flex-col gap-1">
@@ -139,14 +200,21 @@ const FormComments: React.FC<Props> = () => {
             </div>
 
             <div className="flex justify-end gap-4">
-                <button className="border border-[#DEE5ED] rounded-lg grid place-items-center size-10 cursor-pointer">
+                <label className="border border-[#DEE5ED] rounded-lg grid place-items-center size-10 cursor-pointer">
+                    <input type="file" name="" className="hidden" id="" onChange={handleFileChange} />
                     <ClipIcon className="text-black" />
+                </label>
+                <button className="bg-tirth text-white flex items-center h-10 px-20 rounded-lg cursor-pointer" disabled={isSubmitting} onClick={() => form.handleSubmit()}>
+                    {isSubmitting ? (
+                        <SpinnerIcon />
+                    ) : (
+                        'Enviar'
+                    )}
                 </button>
-                <button className="bg-tirth text-white flex items-center h-10 px-20 rounded-lg cursor-pointer" onClick={() => form.handleSubmit()}>Enviar</button>
             </div>
 
         </>
-    )
-}
+    );
+};
 
 export default FormComments;

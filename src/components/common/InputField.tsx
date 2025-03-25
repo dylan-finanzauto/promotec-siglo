@@ -26,7 +26,7 @@ export const InputField: React.FC<Props> = ({ className, type, error, ...props }
     return (
         <div className="relative flex">
             <input
-                className={clsx("h-10 flex-1 border rounded-lg text-[#1F2024] px-3 py-[10px] shadow-sm transition-all", error ? "border-red-400 outline-red-500" : "border-[#DEE5ED] outline-secn-blue")}
+                className={clsx("h-10 flex-1 border rounded-lg text-[#1F2024] px-3 py-[10px] shadow-sm transition-all", error ? "border-red-400 outline-red-500" : "border-[#DEE5ED] outline-secn-blue", className)}
                 {...props}
                 type={type === 'password' && passwordVisible ? 'text' : type}
             />

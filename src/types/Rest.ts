@@ -114,7 +114,7 @@ export interface Piece {
     amount: number;
     attributableId: number;
     stateId: number;
-    typologyId: number;
+    typologyId: number | null;
 }
 
 export interface CompleteResponse {

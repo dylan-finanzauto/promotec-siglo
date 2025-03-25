@@ -16,23 +16,47 @@ import { Piece as AddPiece } from "../../../types/Rest";
 import CheckIcon from "../../../components/common/icons/CheckIcon";
 import RadioGroup from "../../../components/common/RadioGroup";
 import { useAlert } from "../../../hooks/useAlert";
+import { z } from "zod";
 
 type Action = {
     text: string,
     onClick: (row: any) => void
 }
 
+interface AddPieceState extends AddPiece {
+    id: number
+}
+
+interface PieceState extends Piece {
+    id: number
+}
+
 type Props = {
-    pieces: AddPiece[],
+    pieces: AddPieceState[],
+    edit: AddPieceState | null,
     onAdd: (piece: AddPiece) => void,
+    onTrash: () => void,
     actions?: Action[]
 }
 
-const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
+const partSchema = z.object({
+    typeDamageId: z.number().gt(0),
+    typePieceId: z.number().gt(0),
+    sizeDamageId: z.number().gt(0),
+    count: z.number().gt(0),
+    replace: z.boolean(),
+    amount: z.number().nonnegative(),
+    attributableId: z.number().gt(0),
+    stateId: z.number().gt(0),
+    typologyId: z.number().nullable(),
+})
+
+const TableParts: React.FC<Props> = ({ pieces, edit, onAdd, onTrash, actions }) => {
 
     const [isInput, setIsInput] = useState(false);
+    const [showTypology, setShowTypology] = useState(false)
     const { addAlert } = useAlert()
-    const [rowSelected, setRowSelected] = useState(null);
+    const [rowSelected, setRowSelected] = useState<AddPiece | null>(null);
     const [actionPosition, setActionPosition] = useState<{ top: number, left: number } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -43,7 +67,7 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
     const { typologies } = typologyStore((state) => state)
     const { sizeDamages } = sdStore((state) => state)
 
-    const mappedPieces: Piece[] = useMemo(() => pieces.map(piece => ({
+    const mappedPieces: PieceState[] = useMemo(() => pieces.map(piece => ({
         ...piece,
         typePieceName: typePieces.find(tp => tp.id == piece.typePieceId)?.name ?? '',
         typeDamageName: typeDamages.find(td => td.id == piece.typeDamageId)?.name ?? '',
@@ -51,21 +75,25 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
         attributableName: attributables.find(a => a.id == piece.attributableId)?.name ?? '',
         stateIdName: states.find(s => s.id == piece.stateId)?.name ?? '',
         typologyName: typologies.find(t => t.id == piece.typologyId)?.name ?? '',
-    } as Piece)), [pieces, typePieces, typeDamages, sizeDamages, attributables, states, typologies]);
+    })), [pieces, typePieces, typeDamages, sizeDamages, attributables, states, typologies]);
 
     const form = useForm({
         defaultValues: {
-            typeDamageId: 0,
-            typePieceId: 0,
-            sizeDamageId: 0,
-            count: 0,
-            replace: false,
-            amount: 0,
-            attributableId: 0,
-            stateId: 0,
-            typologyId: 0,
+            typeDamageId: edit?.typeDamageId ?? 0,
+            typePieceId: edit?.typePieceId ?? 0,
+            sizeDamageId: edit?.sizeDamageId ?? 0,
+            count: edit?.count ?? 0,
+            replace: edit?.replace ?? false,
+            amount: edit?.amount ?? 0,
+            attributableId: edit?.attributableId ?? 0,
+            stateId: edit?.stateId ?? 0,
+            typologyId: edit?.typologyId ?? null as null | number,
+        },
+        validators: {
+            onChange: partSchema
         },
         onSubmit: ({ value }) => {
+            console.log("value: ", value)
             onAdd(value)
             form.reset()
         },
@@ -89,11 +117,26 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
         };
     }, [rowSelected]);
 
-    const handleSelect = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, row: any) => {
+    const handleSelect = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, row: PieceState) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        setRowSelected(row);
+        setRowSelected(() => ({
+            id: row.id,
+            typeDamageId: typeDamages.find(td => td.name == row.typeDamageName)?.id ?? 0,
+            typePieceId: typePieces.find(tp => tp.name == row.typePieceName)?.id ?? 0,
+            sizeDamageId: sizeDamages.find(sd => sd.name == row.sizeDamageName)?.id ?? 0,
+            count: row.count,
+            replace: row.replace,
+            amount: row.amount,
+            attributableId: attributables.find(a => a.name == row.attributableName)?.id ?? 0,
+            stateId: states.find(s => s.name == row.stateIdName)?.id ?? 0,
+            typologyId: typologies.find(t => t.name == row.typologyName)?.id ?? 0,
+        }));
         setActionPosition({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
     };
+
+    useEffect(() => {
+        if (edit) setIsInput(true)
+    }, [edit])
 
     return (
         <>
@@ -145,9 +188,6 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
                                     <form.Field
                                         name="typeDamageId"
-                                        validators={{
-                                            onChange: ({ value }) => !value ? 'Cliente requerido' : undefined
-                                        }}
                                         children={(field) => (
                                             <>
                                                 <Select
@@ -165,9 +205,6 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
                                     <form.Field
                                         name="typePieceId"
-                                        validators={{
-                                            onChange: ({ value }) => !value ? 'Cliente requerido' : undefined
-                                        }}
                                         children={(field) => (
                                             <>
                                                 <Select
@@ -185,9 +222,6 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
                                     <form.Field
                                         name="sizeDamageId"
-                                        validators={{
-                                            onChange: ({ value }) => !value ? 'Cliente requerido' : undefined
-                                        }}
                                         children={(field) => (
                                             <>
                                                 <Select
@@ -205,9 +239,6 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
                                     <form.Field
                                         name="count"
-                                        validators={{
-                                            onChange: ({ value }) => !value ? 'Código consecionario requerido' : undefined
-                                        }}
                                         children={(field) => (
                                             <>
                                                 <InputField
@@ -249,9 +280,6 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
                                     <form.Field
                                         name="amount"
-                                        validators={{
-                                            onChange: ({ value }) => !value ? 'Código consecionario requerido' : undefined
-                                        }}
                                         children={(field) => (
                                             <>
                                                 <InputField
@@ -270,9 +298,6 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
                                     <form.Field
                                         name="attributableId"
-                                        validators={{
-                                            onChange: ({ value }) => !value ? 'Cliente requerido' : undefined
-                                        }}
                                         children={(field) => (
                                             <>
                                                 <Select
@@ -280,7 +305,10 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
                                                     name={field.name}
                                                     value={field.state.value}
                                                     error={field.state.meta.errors.length > 0}
-                                                    onChange={field.handleChange}
+                                                    onChange={(value) => {
+                                                        setShowTypology(value == 24 ? true : false)
+                                                        field.handleChange(value)
+                                                    }}
                                                     onBlur={field.handleBlur}
                                                 />
                                             </>
@@ -290,9 +318,6 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
                                     <form.Field
                                         name="stateId"
-                                        validators={{
-                                            onChange: ({ value }) => !value ? 'Cliente requerido' : undefined
-                                        }}
                                         children={(field) => (
                                             <>
                                                 <Select
@@ -308,28 +333,28 @@ const TableParts: React.FC<Props> = ({ pieces, onAdd, actions }) => {
                                     />
                                 </div>
                                 <div className="text-sm px-4 py-5 font-medium whitespace-nowrap text-text border-b border-[#DEE5ED]">
-                                    <form.Field
-                                        name="typologyId"
-                                        validators={{
-                                            onChange: ({ value }) => !value ? 'Cliente requerido' : undefined
-                                        }}
-                                        children={(field) => (
-                                            <>
-                                                <Select
-                                                    items={typologies.map(c => ({ key: c.name, value: c.id }))}
-                                                    name={field.name}
-                                                    value={field.state.value}
-                                                    error={field.state.meta.errors.length > 0}
-                                                    onChange={field.handleChange}
-                                                    onBlur={field.handleBlur}
-                                                />
-                                            </>
-                                        )}
-                                    />
+                                    {showTypology && (
+                                        <form.Field
+                                            name="typologyId"
+                                            children={(field) => (
+                                                <>
+                                                    <Select
+                                                        items={typologies.map(c => ({ key: c.name, value: c.id }))}
+                                                        name={field.name}
+                                                        value={field.state.value}
+                                                        error={field.state.meta.errors.length > 0}
+                                                        onChange={field.handleChange}
+                                                        onBlur={field.handleBlur}
+                                                    />
+                                                </>
+                                            )}
+                                        />
+                                    )}
                                 </div>
                                 <div className="text-sm sticky right-0 px-3 py-2 bg-white shadow-lg grid place-items-center border-b border-[#DEE5ED]">
                                     <button className="grid place-items-center rounded-lg size-10 hover:bg-[#EDEFF7] transition cursor-pointer" onClick={() => {
                                         setIsInput(false)
+                                        onTrash()
                                         form.reset()
                                     }}>
                                         <TrashIcon className="text-[#7C93B5]" />

@@ -45,7 +45,7 @@ const ReportsContainer: React.FC = () => {
 
     const form = useForm({
         defaultValues: {
-            date: new Date()
+            date: new Date() as Date | null
         }
     })
 
@@ -86,8 +86,6 @@ const ReportsContainer: React.FC = () => {
                         </div>
                     </div>
                 )}
-
-
             </div>
         </Dashboard>
 

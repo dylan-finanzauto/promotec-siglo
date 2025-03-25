@@ -5,9 +5,9 @@ import FormNews from "./forms/FormNews";
 import Resume from "./Resume";
 import { TabContainer, Tab } from "../../components/ui/TabContainer";
 import FormSupport from "./forms/FormSupports";
-import FormComments from "./forms/FormComments";
 import ChevronLeftFilledIcon from "../../components/common/icons/ChevronLeftFilledIcon";
 import { useIdentifier } from "../../hooks/useIdentifier";
+import FormComments from "./forms/FormComments";
 
 type Props = {}
 
@@ -48,6 +48,7 @@ const DetailContainer: React.FC<Props> = () => {
                             <FormSupport onCancel={() => navigate({ to: '/options' })} />
                         </Tab>
                         <Tab title="Histórico comentarios">
+                            {/* <FormComments /> */}
                             <FormComments />
                         </Tab>
                     </TabContainer>

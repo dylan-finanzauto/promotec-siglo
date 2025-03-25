@@ -10,6 +10,7 @@ export const useStore = create<UserStore>()((set) => ({
     user: {
         name: "",
         lastName: "",
+        userName: "",
         email: "",
         lastConnecction: "",
         roles: []

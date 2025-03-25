@@ -2,10 +2,11 @@ import type React from "react";
 import Wrapper from "./Wrapper";
 import Header from "../components/ui/Header";
 import Sidebar from "../components/ui/Sidebar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import useAuth from "../hooks/useAuth";
 import { useNavigate } from "@tanstack/react-router";
 import { useAlert } from "../hooks/useAlert";
+import useIdleTimeout from "../hooks/useIdleTimeout";
 
 type Props = {
     children: React.ReactNode;
@@ -15,6 +16,7 @@ const Dashboard: React.FC<Props> = ({ children }) => {
     const auth = useAuth();
     const { addAlert } = useAlert();
     const navigate = useNavigate();
+    const [alertShown, setAlertShown] = useState(false);
 
     useEffect(() => {
         const { token } = auth;
@@ -23,13 +25,19 @@ const Dashboard: React.FC<Props> = ({ children }) => {
         if (!token.isAuthenticated && token.expired) {
             console.log("Token expirado, mostrando alerta");
             addAlert("warning", "Sesión Terminada", "La sesión expiró", () => navigate({ to: "/" }));
+            setAlertShown(true)
         }
+    }, [auth, alertShown]);
 
-        if (!token.isAuthenticated && !token.expired) {
-            console.log("Token no autenticado y no expirado, redirigiendo");
-            navigate({ to: "/" });
-        }
-    }, [auth]);
+    const handleTimeout = () => {
+        if (alertShown) return
+        console.log("Tiempo de inactividad alcanzado, cerrando sesión");
+        addAlert("warning", "Sesión Terminada", "La sesión expiró por inactividad", () => navigate({ to: "/" }));
+        setAlertShown(true)
+        auth.onLogOut();
+    };
+
+    useIdleTimeout(handleTimeout, 1000 * 60 * 15);
 
     return (
         <div className="grid grid-cols-1 grid-rows-[96px_1fr] min-h-screen bg-[#F0F2F9]">

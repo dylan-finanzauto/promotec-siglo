@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Piece, Ticket, File, TicketResult } from "../types/Ticket";
+import { Ticket, File, TicketResult, DetailFile } from "../types/Ticket";
 import { Piece as AddPiece, CompleteResponse, PaginatedResponse, PostTicket, PostTicketComplete } from "../types/Rest";
 
 const detail = async (accessToken: string, id: string): Promise<Ticket> => {
@@ -88,8 +88,6 @@ const addPieces = async (accessToken: string, id: string, data: AddPiece[]): Pro
         throw error;
     }
 };
-
-
 
 const addFiles = async (accessToken: string, id: number): Promise<any> => {
     try {
@@ -219,9 +217,9 @@ const pagination = async (accessToken: string, data: Record<any, any>): Promise<
     }
 };
 
-const downloadB64 = async (accessToken: string, id: string): Promise<any> => {
+const downloadB64 = async (accessToken: string, id: string): Promise<DetailFile> => {
     try {
-        const response = await axios.get<any>(
+        const response = await axios.get<DetailFile>(
             // 'http://192.168.40.106/Promotec.Siglo.Api/api/master/attributable',
             `${import.meta.env.VITE_API_URL}/ticket/download-base64/${id}`,
             {

@@ -69,3 +69,9 @@ export interface TicketResult {
     serie: string;
     plate: string;
 }
+
+export interface DetailFile {
+    name: string;
+    extension: string;
+    base64: string;
+}

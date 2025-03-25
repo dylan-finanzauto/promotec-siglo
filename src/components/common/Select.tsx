@@ -61,9 +61,9 @@ export default function Select({ items, className, value, error, onChange, onBlu
             const spaceAbove = rect.top;
 
             if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
-                setActionPosition({ top: rect.top + window.scrollY - dropdownHeight, left: rect.left + window.scrollX });
+                setActionPosition({ top: rect.top - dropdownHeight, left: rect.left });
             } else {
-                setActionPosition({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+                setActionPosition({ top: rect.bottom, left: rect.left });
             }
         }
     }, [isOpen]);
@@ -86,7 +86,7 @@ export default function Select({ items, className, value, error, onChange, onBlu
             </div>
             {isOpen && actionPosition && (
                 <ul
-                    className="absolute w-full h-[248px] overflow-y-auto rounded-lg py-2 bg-white border border-[#DEE5ED] mt-1 z-10 shadow-lg"
+                    className="fixed w-full h-[248px] overflow-y-auto rounded-lg py-2 bg-white border border-[#DEE5ED] mt-1 z-10 shadow-lg"
                     style={{ top: actionPosition.top, left: actionPosition.left, width: selectRef.current?.clientWidth }}
                 >
                     {items.map((i) => (

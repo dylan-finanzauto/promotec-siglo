@@ -5,11 +5,11 @@ import XIcon from "../common/icons/XIcon";
 import useAuth from "../../hooks/useAuth";
 
 type Props = {
-    id: string,
+    url: string,
     onUpload: () => void
 }
 
-const FileUpload: React.FC<Props> = ({ id, onUpload }) => {
+const FileUpload: React.FC<Props> = ({ url, onUpload }) => {
 
     const { token } = useAuth()
     const [file, setFile] = useState<File | null>(null);
@@ -23,7 +23,7 @@ const FileUpload: React.FC<Props> = ({ id, onUpload }) => {
         const formData = new FormData();
         formData.append('Files', file);
 
-        xhr.open('POST', `${import.meta.env.VITE_API_URL}/ticket/add-files/${id}`);
+        xhr.open('POST', url);
         xhr.setRequestHeader('Authorization', `Bearer ${token.accessToken}`);
 
         xhr.upload.onprogress = (event) => {

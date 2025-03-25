@@ -17,9 +17,43 @@ import { InputField } from "../../../components/common/InputField";
 import { addToDate, formatearFechaISO } from "../../../util/date";
 import SpinnerIcon from "../../../components/common/icons/SpinnerIcon";
 import { useAlert } from "../../../hooks/useAlert";
+import { z } from "zod";
 
 type Props = {
     onCancel: () => void
+}
+
+const ticketSchema = z.object({
+    client: z.string(),
+    concessionerCode: z.string(),
+    catalog: z.string(),
+    ocurrencyDate: z.date(),
+    deliveryDate: z.date(),
+    preAlertDate: z.date(),
+    contact: z.string(),
+    email: z.string().refine(value => {
+        if (value && value.trim() !== "") {
+            return /\S+@\S+\.\S+/.test(value);
+        }
+        return true;
+    }),
+    phone: z.string().refine(value => {
+        if (value && value.trim() !== "") {
+            return /^[0-9]+$/.test(value);
+        }
+        return true;
+    }),
+    concessionerId: z.number().gt(0),
+    typeVehicleId: z.number().gt(0),
+    serie: z.string().nonempty(),
+    numberDua: z.string().nonempty(),
+    numberRemesa: z.string().nonempty(),
+    driverName: z.string().nonempty(),
+    plate: z.string().nonempty()
+})
+
+interface PieceState extends Piece {
+    id: number
 }
 
 const FormNews: React.FC<Props> = ({ onCancel }) => {
@@ -28,13 +62,33 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
     const { token } = useAuth()
     const { addAlert } = useAlert()
     const [formData, setFormData] = useState<Ticket | null>(null);
-    const [pieces, setPieces] = useState<Piece[]>([])
+    const [pieces, setPieces] = useState<PieceState[]>([])
+    const [piece2Edit, setPiece2Edit] = useState<PieceState | null>(null);
     const { concessioners } = concStore((state) => state)
     const { companies } = comStore((state) => state)
     const { typeVehicles } = tvStore((state) => state)
 
+    const actions = [
+        {
+            text: "Editar",
+            onClick: (row: PieceState) => {
+                setPieces(curr => curr.filter((p) => {
+                    return p.id != row.id
+                }))
+                setPiece2Edit(row)
+            },
+        },
+        {
+            text: "Eliminar",
+            onClick: (row: PieceState) => {
+                setPieces(curr => curr.filter((p) => {
+                    return p.id != row.id
+                }))
+            },
+        },
+    ];
+
     useEffect(() => {
-        console.log("Id: ", id)
         if (!id) return
 
         console.log("Launch mutations")
@@ -46,7 +100,6 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
         mutationKey: ['detail'],
         mutationFn: (id: string) => detail(token.accessToken, id),
         onSuccess: (data) => {
-            console.log("data: ", data)
             setFormData(data)
         }
     })
@@ -55,8 +108,7 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
         mutationKey: ['pieces'],
         mutationFn: (id: string) => ticketPieces(token.accessToken, id),
         onSuccess: (data) => {
-            // console.log("Data: ", data)
-            setPieces(data.map(p => ({ amount: p.amount, attributableId: p.attributableName, count: p.count, replace: p.replace, sizeDamageId: p.sizeDamageName, stateId: p.stateIdName, typeDamageId: p.typeDamageName, typePieceId: p.typePieceName, typologyId: p.typologyName })))
+            setPieces(data.map((p, i) => ({ id: i, amount: p.amount, attributableId: p.attributableName, count: p.count, replace: p.replace, sizeDamageId: p.sizeDamageName, stateId: p.stateIdName, typeDamageId: p.typeDamageName, typePieceId: p.typePieceName, typologyId: p.typologyName })))
         }
     })
 
@@ -79,6 +131,9 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
             driverName: formData?.driverName ?? '',
             plate: formData?.plate ?? '',
         },
+        validators: {
+            onChange: ticketSchema
+        },
         onSubmit: async ({ value }) => {
             if (!id) return
             try {
@@ -98,6 +153,15 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
             }
         }
     });
+
+    const handleAdd = (piece: Piece) => {
+        setPieces(pieces => [...pieces, { ...piece, id: pieces.length }])
+        setPiece2Edit(null)
+    }
+
+    const handleTrash = () => {
+        setPiece2Edit(null)
+    }
 
     return (
         <>
@@ -166,17 +230,21 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             )} />
                     </div>
 
+
                     <div className="flex flex-col gap-1">
                         <form.Field
                             name="ocurrencyDate"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Ocurrencia Novedad</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Ocurrencia Novedad</label>
                                     <Calendar
                                         name={field.name}
                                         value={field.state.value}
                                         error={field.state.meta.errors.length > 0}
-                                        onChange={field.handleChange}
+                                        maxDate={new Date()}
+                                        onChange={(value) => {
+                                            field.handleChange(value)
+                                        }}
                                         onBlur={field.handleBlur}
                                     />
                                 </>
@@ -188,12 +256,20 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             name="deliveryDate"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Entrega Vehículo</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Entrega Vehículo</label>
                                     <Calendar
                                         name={field.name}
                                         value={field.state.value}
                                         error={field.state.meta.errors.length > 0}
-                                        onChange={field.handleChange}
+                                        maxDate={new Date()}
+                                        onChange={(value) => {
+                                            const limit = addToDate(form.getFieldValue('preAlertDate') as Date, -10, "days")
+                                            if (value && (value < limit)) {
+                                                addAlert("info", "Tener en cuenta", "La diferencia entre la fecha de Pre-Alerta y la entrega del vehículo, no puede ser mayor a 9 día hábiles")
+                                                return;
+                                            }
+                                            field.handleChange(value)
+                                        }}
                                         onBlur={field.handleBlur}
                                     />
                                 </>
@@ -205,11 +281,12 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             name="preAlertDate"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Pre-alerta</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Pre-alerta</label>
                                     <Calendar
                                         name={field.name}
                                         value={field.state.value}
-                                        maxDate={form.getFieldValue('deliveryDate') ? addToDate(form.getFieldValue('deliveryDate') as Date, 9, "days") : undefined}
+                                        minDate={addToDate(new Date(), -1, "days")}
+                                        maxDate={new Date()}
                                         error={field.state.meta.errors.length > 0}
                                         onChange={field.handleChange}
                                         onBlur={field.handleBlur}
@@ -290,7 +367,7 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             name="concessionerId"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Concesionario</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Concesionario</label>
                                     <Select
                                         items={concessioners.map(c => ({ key: c.name, value: c.id }))}
                                         name={field.name}
@@ -309,7 +386,7 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             name="typeVehicleId"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Vehículo</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Vehículo</label>
                                     <Select
                                         items={typeVehicles.map(c => ({ key: c.name, value: c.id }))}
                                         name={field.name}
@@ -328,7 +405,7 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             name="serie"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Serie</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Serie</label>
                                     <InputField
                                         type="text"
                                         id={field.name}
@@ -348,7 +425,7 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             name="numberDua"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Número DUA</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Número DUA</label>
                                     <InputField
                                         type="text"
                                         id={field.name}
@@ -368,7 +445,7 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             name="numberRemesa"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Número remesa</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Número remesa</label>
                                     <InputField
                                         type="text"
                                         id={field.name}
@@ -395,7 +472,7 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             name="driverName"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Nombre completo</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Nombre completo</label>
                                     <InputField
                                         type="text"
                                         id={field.name}
@@ -415,7 +492,7 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                             name="plate"
                             children={(field) => (
                                 <>
-                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Placa</label>
+                                    <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>*Placa</label>
                                     <InputField
                                         type="text"
                                         id={field.name}
@@ -433,7 +510,9 @@ const FormNews: React.FC<Props> = ({ onCancel }) => {
                 </div>
             </div>
 
-            <TableParts pieces={pieces} onAdd={(piece) => setPieces(pieces => [...pieces, piece])} />
+            {/* <TableParts pieces={pieces} onAdd={(piece) => setPieces(pieces => [...pieces, piece])} /> */}
+
+            <TableParts pieces={pieces} edit={piece2Edit} onAdd={handleAdd} actions={actions} onTrash={handleTrash} />
 
             <div className="flex justify-end gap-4 mt-5">
                 <button className="flex items-center px-14 border border-tirth rounded-lg text-tirth h-10 cursor-pointer" onClick={() => onCancel()}>Cancelar</button>

@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import DocumentIcon from "../../components/common/icons/DocumentIcon";
 import XIcon from "../../components/common/icons/XIcon";
 import Select from "../../components/common/Select";
@@ -6,27 +6,41 @@ import Calendar from "../../components/common/Calendar";
 import clsx from "clsx";
 import { useForm } from "@tanstack/react-form";
 import { InputField } from "../../components/common/InputField";
+import { useStore as stateStore } from "../../store/state";
 
 type Props = {}
 
 const Resume: React.FC<Props> = () => {
 
+    const { states } = stateStore((state) => state)
     const [showResume, setShowResume] = useState(false);
 
     const form = useForm({
         defaultValues: {
             stateId: 0,
-            alertDate: new Date(),
+            alertDate: null as Date | null,
             number: '',
             concessionerName: '',
             vehicle: '',
             serie: '',
             attributable: '',
-            advice: new Date(),
-            preAlert: new Date(),
+            advice: null as Date | null,
+            preAlert: null as Date | null,
             responseTime: ''
         }
     })
+
+    useEffect(() => {
+        if (showResume) {
+            document.body.style.overflowY = 'hidden';
+        } else {
+            document.body.style.overflowY = 'auto';
+        }
+
+        return () => {
+            document.body.style.overflowY = 'auto';
+        }
+    }, [showResume])
 
     return (
         <>
@@ -56,9 +70,9 @@ const Resume: React.FC<Props> = () => {
                                                     children={(field) => (
                                                         <>
                                                             <label className="text-[#2F3036] text-xs font-semibold"
-                                                            >{field.name}</label>
+                                                            >Estado</label>
                                                             <Select
-                                                                items={[]}
+                                                                items={states.map(s => ({ key: s.name, value: s.id }))}
                                                                 name={field.name}
                                                                 value={field.state.value}
                                                                 error={field.state.meta.errors.length > 0}
@@ -78,7 +92,7 @@ const Resume: React.FC<Props> = () => {
                                                     children={(field) => (
                                                         <>
                                                             <label className="text-[#2F3036] text-xs font-semibold"
-                                                            >{field.name}</label>
+                                                            >Hora respuesta</label>
                                                             <Calendar
                                                                 name={field.name}
                                                                 value={field.state.value}
@@ -104,6 +118,7 @@ const Resume: React.FC<Props> = () => {
                                                         <label className="text-[#2F3036] text-xs font-semibold"
                                                         >No. Reclamo</label>
                                                         <InputField
+                                                            className="bg-[#F5F7F9]"
                                                             type="text"
                                                             id={field.name}
                                                             name={field.name}
@@ -125,6 +140,7 @@ const Resume: React.FC<Props> = () => {
                                                         <label className="text-[#2F3036] text-xs font-semibold"
                                                         >Concesionario</label>
                                                         <InputField
+                                                            className="bg-[#F5F7F9]"
                                                             type="text"
                                                             id={field.name}
                                                             name={field.name}
@@ -146,6 +162,7 @@ const Resume: React.FC<Props> = () => {
                                                         <label className="text-[#2F3036] text-xs font-semibold"
                                                         >Vehículo</label>
                                                         <InputField
+                                                            className="bg-[#F5F7F9]"
                                                             type="text"
                                                             id={field.name}
                                                             name={field.name}
@@ -167,6 +184,7 @@ const Resume: React.FC<Props> = () => {
                                                         <label className="text-[#2F3036] text-xs font-semibold"
                                                         >Serie</label>
                                                         <InputField
+                                                            className="bg-[#F5F7F9]"
                                                             type="text"
                                                             id={field.name}
                                                             name={field.name}
@@ -188,6 +206,7 @@ const Resume: React.FC<Props> = () => {
                                                         <label className="text-[#2F3036] text-xs font-semibold"
                                                         >Atribuible</label>
                                                         <InputField
+                                                            className="bg-[#F5F7F9]"
                                                             type="text"
                                                             id={field.name}
                                                             name={field.name}
@@ -249,6 +268,7 @@ const Resume: React.FC<Props> = () => {
                                                         <label className="text-[#2F3036] text-xs font-semibold"
                                                         >Tiempo respuesta PT</label>
                                                         <InputField
+                                                            className="bg-[#F5F7F9]"
                                                             type="text"
                                                             id={field.name}
                                                             name={field.name}

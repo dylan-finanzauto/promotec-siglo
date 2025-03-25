@@ -6,7 +6,7 @@ import Calendar from "../../../components/common/Calendar";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useIdentifier } from "../../../hooks/useIdentifier";
-import { detail, files, update } from "../../../services/ticket";
+import { detail, downloadB64, downloadFile, files, update } from "../../../services/ticket";
 import useAuth from "../../../hooks/useAuth";
 import { Ticket } from "../../../types/Ticket";
 import TableSkeleton from "../../../components/common/TableSkeleton";
@@ -15,35 +15,30 @@ import { InputField } from "../../../components/common/InputField";
 import clsx from "clsx";
 import SpinnerIcon from "../../../components/common/icons/SpinnerIcon";
 import { useAlert } from "../../../hooks/useAlert";
+import { z } from "zod";
+import { getMimeType } from "../../../util/mime";
+import { downloadBase64File } from "../../../util/file";
+import PreviewerDialog from "../../../components/ui/PreviewerDialog";
+
+interface RowFile {
+    ID: string;
+    Archivo: string;
+    Propietario: string;
+    "Fecha y hora": string;
+}
 
 const cols = ["ID", "Archivo", "Propietario", "Fecha y hora"];
 
-const actions = [
-    {
-        text: "Ver detalle",
-        onClick: () => {
-            console.log("Ir al detalle");
-        },
-    },
-    {
-        text: "Descargar",
-        onClick: () => {
-            console.log("Ir a descargar");
-        },
-    },
-    {
-        text: "Editar",
-        onClick: () => {
-            console.log("Ir a editar");
-        },
-    },
-    {
-        text: "Eliminar",
-        onClick: () => {
-            console.log("Ir a eliminar");
-        },
-    },
-];
+const supportSchema = z.object({
+    alertDate: z.date().nullable(),
+    responseDate: z.date().nullable(),
+    requestDate: z.date().nullable(),
+    invoice: z.string(),
+    invoiceNumber: z.string(),
+    invoiceAmount: z.number(),
+    ticketAmount: z.number(),
+    firstPayment: z.number()
+})
 
 type Props = {
     onCancel: () => void
@@ -52,10 +47,51 @@ type Props = {
 const FormSupport: React.FC<Props> = ({ onCancel }) => {
 
     const [formData, setFormData] = useState<Ticket | null>(null)
-
+    const [previewProps, setPreviewProps] = useState({ show: false, mediaType: '', b64: "", title: '' });
     const { id } = useIdentifier()
     const { token } = useAuth()
     const { addAlert } = useAlert()
+
+    const actions = [
+        {
+            text: "Ver detalle",
+            onClick: (row: RowFile) => {
+                const fileSelected = data?.find(f => f.nodeId == row.ID)
+                if (!fileSelected) return
+                downloadB64(token.accessToken, fileSelected.nodeId)
+                    .then(res => {
+                        console.log("Ir al detalle: ", res);
+                        setPreviewProps(curr => ({
+                            ...curr,
+                            show: true,
+                            b64: res.base64,
+                            mediaType: getMimeType(res.extension)
+                        }))
+                    })
+            },
+        },
+        {
+            text: "Descargar",
+            onClick: (row: RowFile) => {
+                downloadFile(token.accessToken, row.ID)
+                    .then(res => {
+                        downloadBase64File('application/octet-stream', res, row.Archivo)
+                    })
+            }
+        },
+        {
+            text: "Editar",
+            onClick: () => {
+                console.log("Ir a editar");
+            },
+        },
+        {
+            text: "Eliminar",
+            onClick: () => {
+                console.log("Ir a eliminar");
+            },
+        },
+    ];
 
     const mutation = useMutation({
         mutationKey: ['detail'],
@@ -67,6 +103,11 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
         onSuccess: (data) => setFormData(data)
     })
 
+    useEffect(() => {
+        if (!id) return
+        mutation.mutate(id)
+    }, [id])
+
     const form = useForm({
         defaultValues: {
             alertDate: (formData?.alertDate ? new Date(formData.alertDate) : null) as null | Date,
@@ -77,6 +118,9 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
             invoiceAmount: formData?.inVoiceAmount ?? 0,
             ticketAmount: formData?.ticketAmount ?? 0,
             firstPayment: formData?.firstPayment ?? 0,
+        },
+        validators: {
+            onChange: supportSchema
         },
         onSubmit: async ({ value }) => {
             if (!id) return
@@ -100,7 +144,10 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
         queryKey: ['files'],
         queryFn: async () => {
             if (!id) return
-            return await files(token.accessToken, id)
+            const ticketFiles = await files(token.accessToken, id)
+
+            console.log("ticket files: ", ticketFiles)
+            return ticketFiles;
         },
     })
 
@@ -111,13 +158,9 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
         "Fecha y hora": formatearFecha(f.created)
     })), [data])
 
-    useEffect(() => {
-        if (!id) return
-        mutation.mutate(id)
-    }, [id])
-
     return (
         <>
+            <PreviewerDialog title={previewProps.title} b64={previewProps.b64} mediaType={previewProps.mediaType} isOpen={previewProps.show} onClose={() => setPreviewProps(v => ({ ...v, show: false }))} />
             <h3 className="text-xl text-text font-bold">Información</h3>
             <div className="space-y-[10px]">
                 <h4 className="text-secn-blue font-bold">Documentos soportes</h4>
@@ -134,7 +177,7 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
                         </p>
                     </div>
 
-                    {id && <FileUpload id={id} onUpload={() => refetch()} />}
+                    {id && <FileUpload url={`${import.meta.env.VITE_API_URL}/ticket/add-files/${id}`} onUpload={() => refetch()} />}
                     <div
                         className="p-5 rounded-[10px] border border-princ-blue space-y-3"
                     >
@@ -220,9 +263,6 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
                     <div className="flex flex-col gap-1">
                         <form.Field
                             name="invoice"
-                            validators={{
-                                onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                            }}
                             children={(field) => (
                                 <>
                                     <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Recibo factura</label>
@@ -242,9 +282,6 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
                     <div className="flex flex-col gap-1">
                         <form.Field
                             name="invoiceNumber"
-                            validators={{
-                                onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                            }}
                             children={(field) => (
                                 <>
                                     <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Número factura</label>
@@ -264,9 +301,6 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
                     <div className="flex flex-col gap-1">
                         <form.Field
                             name="invoiceAmount"
-                            validators={{
-                                onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                            }}
                             children={(field) => (
                                 <>
                                     <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Vr. factura</label>
@@ -286,9 +320,6 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
                     <div className="flex flex-col gap-1">
                         <form.Field
                             name="ticketAmount"
-                            validators={{
-                                onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                            }}
                             children={(field) => (
                                 <>
                                     <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Valor reclamo</label>
@@ -308,9 +339,6 @@ const FormSupport: React.FC<Props> = ({ onCancel }) => {
                     <div className="flex flex-col gap-1">
                         <form.Field
                             name="firstPayment"
-                            validators={{
-                                onChange: ({ value }) => !value ? 'Catálogo requerido' : undefined
-                            }}
                             children={(field) => (
                                 <>
                                     <label htmlFor={field.name} className={clsx("text-xs font-semibold", field.state.meta.errors.length > 0 ? "text-red-500" : "text-[#2F3036]")}>Valor primer tramo</label>
